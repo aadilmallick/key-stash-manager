@@ -1,5 +1,9 @@
 import React, { useState } from "react";
-import { setLocalStorage, useSecretsStore } from "../store/secretsStore";
+import {
+  getLocalStorage,
+  setLocalStorage,
+  useSecretsStore,
+} from "../store/secretsStore";
 import { Secret } from "../types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +20,7 @@ import {
   Loader2,
   Import,
   LucideXCircle,
+  LucideDownload,
 } from "lucide-react";
 import SecretModal from "./SecretModal";
 import { useToast } from "@/components/ui/use-toast";
@@ -25,6 +30,7 @@ import { Dialog, DialogContent, DialogTitle } from "@radix-ui/react-dialog";
 import { DialogHeader } from "./ui/dialog";
 import { Label } from "recharts";
 import { parseToAppJSON } from "@/lib/utils";
+import { Textarea } from "./ui/textarea";
 
 const SecretsList = () => {
   const {
@@ -49,6 +55,8 @@ const SecretsList = () => {
   const { toast } = useToast();
   const { pushChangesToServer, isSyncing, startSyncLoading, stopSyncLoading } =
     useSync();
+  const [importEnvFileContents, setImportEnvFileContents] =
+    useState<string>("");
 
   async function saveChangesToServer() {
     try {
@@ -100,6 +108,28 @@ const SecretsList = () => {
     }
   };
 
+  function onExport() {
+    // const data = JSON.parse()
+    const blob = new Blob([getLocalStorage()], {
+      type: "application/json",
+    });
+    const file = new File([blob], "export-secrets.json", {
+      type: "application/json",
+    });
+    const link = document.createElement("a");
+    const blobUrl = URL.createObjectURL(file);
+    link.download = "export-secrets.json";
+    link.href = blobUrl;
+    link.click();
+    link.remove();
+    console.log("clicked");
+    toast({
+      title: "export succeeded",
+      description: "Make sure to keep your secrets safe!",
+      variant: "default",
+    });
+  }
+
   const handleSaveSecret = (
     secretData: Omit<Secret, "id" | "createdAt" | "updatedAt">
   ) => {
@@ -118,6 +148,105 @@ const SecretsList = () => {
       saveChangesToServer();
     }
   };
+
+  function importEnvFile() {
+    console.log("importEnvFile", importEnvFileContents);
+    const modal = document.getElementById(
+      "import-env-modal"
+    ) as HTMLDialogElement;
+    // 1. close the modal
+    if (modal) {
+      modal.close();
+    }
+    // 2. check if there is content to import
+    if (!importEnvFileContents.trim()) {
+      toast({
+        title: "Import failed",
+        description: "No content to import",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 3. parse the content
+    const lines = importEnvFileContents.split("\n");
+    const secrets: Array<{ name: string; value: string }> = [];
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (!trimmedLine || trimmedLine.startsWith("#")) continue;
+
+      const match = trimmedLine.match(/^([^=]+)=(.*)$/);
+      if (match) {
+        const [, name, value] = match;
+        secrets.push({
+          name: name.trim(),
+          value: value.trim(),
+        });
+      }
+    }
+
+    if (secrets.length === 0) {
+      toast({
+        title: "Import failed",
+        description: "No valid environment variables found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Add secrets to store
+    const existingSecrets = selectedFolder?.secrets || [];
+    startSyncLoading();
+    for (const secret of secrets) {
+      const existing = existingSecrets.find((s) => s.name === secret.name);
+      if (existing) {
+        updateSecret(selectedFolderId, existing.id, {
+          ...secret,
+          tags: existing.tags, // Preserve existing tags
+        });
+      } else {
+        addSecret(selectedFolderId, {
+          ...secret,
+          tags: [],
+        });
+      }
+    }
+    stopSyncLoading();
+
+    saveChangesToServer();
+
+    toast({
+      title: "Import successful",
+      description: `Imported ${secrets.length} environment variables`,
+      variant: "default",
+    });
+
+    setImportEnvFileContents("");
+  }
+
+  async function importJSONFile(file: File) {
+    const content = await file.text();
+    const parsedData = parseToAppJSON(content);
+    if (!parsedData) {
+      // toast({})
+      toast({
+        title: "Import failed",
+        description: "Failed to import JSON data. Structure is malformed.",
+        variant: "destructive",
+      });
+    } else {
+      startSyncLoading();
+      setLocalStorage(parsedData);
+      loadData();
+      stopSyncLoading();
+      toast({
+        title: "Import failed",
+        description: "Failed to import JSON data. Structure is malformed.",
+        variant: "destructive",
+      });
+    }
+  }
 
   const toggleTagFilter = (tag: string) => {
     setSelectedTags(
@@ -189,13 +318,13 @@ const SecretsList = () => {
                     </Button>
                   </div>
 
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 mt-2">
                     Created: {new Date(secret.createdAt).toLocaleDateString()} •
                     Updated: {new Date(secret.updatedAt).toLocaleDateString()}
                   </p>
                 </div>
 
-                <div className="flex gap-2 ml-4">
+                <div className="flex gap-2 ml-4 relative top-1">
                   <Button
                     variant="outline"
                     size="sm"
@@ -226,20 +355,39 @@ const SecretsList = () => {
   return (
     <div className="flex-1 p-6">
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h1 className="text-2xl font-bold text-gray-900">
             {selectedFolder?.name || "Secrets"}
           </h1>
-          <div className="flex gap-x-2">
+          <div className="flex gap-2 flex-wrap">
             <ToggleDialogButton
               dialogid="import-modal"
               variant="ghost"
-              className="border-2 border-gray-900 cursor-pointer"
+              className="bg-orange-400 border-2 border-orange-700 cursor-pointer"
             >
               <Import className="h-4 w-4 mr-2" />
               Import Secrets
             </ToggleDialogButton>
-            <Button onClick={() => setIsModalOpen(true)}>
+            <ToggleDialogButton
+              dialogid="import-env-modal"
+              variant="ghost"
+              className="bg-green-400 border-2 border-green-700 cursor-pointer"
+            >
+              <Import className="h-4 w-4 mr-2" color="#197a2c" />
+              Import Env file
+            </ToggleDialogButton>
+            <Button
+              variant="ghost"
+              className="border-2 border-gray-900 cursor-pointer hover:bg-gray-900 hover:text-white transition-colors"
+              onClick={onExport}
+            >
+              <LucideDownload className="h-4 w-4 mr-2" />
+              Export Secrets
+            </Button>
+            <Button
+              className="cursor-pointer"
+              onClick={() => setIsModalOpen(true)}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Secret
             </Button>
@@ -308,6 +456,8 @@ const SecretsList = () => {
         id="import-modal"
         className="px-4 py-12 rounded-lg border-2 border-gray-300 bg-white relative space-y-2"
       >
+        <h3 className="text-lg font-bold">Import JSON configuration</h3>
+
         <HideDialogButton
           dialogid="import-modal"
           className="absolute top-1 right-1 cursor-pointer"
@@ -317,7 +467,8 @@ const SecretsList = () => {
         </HideDialogButton>
         <p className="text-sm text-muted-foreground">
           You can override all current secrets, folders, and tags by importing a
-          JSON file (one that's exported from this website)
+          JSON file (one that's exported from this website). Drag a file into
+          the file selector to get started.
         </p>
         <p className="text-red-400 text-sm mb-4">
           Caution: this will override all current data, which is irrecoverable.
@@ -338,34 +489,77 @@ const SecretsList = () => {
               const target = e.target as HTMLInputElement;
               if (target.files && target.files.length > 0) {
                 const file = target.files[0]!;
-                const content = await file.text();
-                const parsedData = parseToAppJSON(content);
-                if (!parsedData) {
-                  // toast({})
-                  toast({
-                    title: "Import failed",
-                    description:
-                      "Failed to import JSON data. Structure is malformed.",
-                    variant: "destructive",
-                  });
-                } else {
-                  startSyncLoading();
-                  setLocalStorage(parsedData);
-                  loadData();
-                  stopSyncLoading();
-                }
+                await importJSONFile(file);
                 target.value = ""; // Clear the input value
               }
             }}
           />
         </div>
-
-        {/* <div className="flex gap-2 justify-end">
-            <Button variant="default">
-              Import
-            </Button>
-          </div> */}
       </dialog>
+
+      <dialog
+        id="import-env-modal"
+        className="px-4 py-8 rounded-lg border-2 border-gray-300 bg-white relative space-y-2"
+      >
+        <h3 className="text-lg font-bold">Import .env file</h3>
+        <HideDialogButton
+          dialogid="import-env-modal"
+          className="absolute top-1 right-1 cursor-pointer"
+          variant="ghost"
+        >
+          <LucideXCircle color="red" className="w-8 h-8" />
+        </HideDialogButton>
+        <p className="text-sm text-muted-foreground">
+          You can import a .env file or its contents and choose which folder to
+          export to.
+        </p>
+        <p className="text-red-400 text-sm mb-4 font-semibold">
+          Caution: this will override any environment variables with the same
+          name.
+        </p>
+
+        <div className="space-y-2 pt-4">
+          <Label>.env file</Label>
+          <Input
+            id="json file"
+            type="file"
+            placeholder="jsonfile.txt"
+            multiple={false}
+            onChange={async (e) => {
+              const shouldContinue = confirm(
+                "are you sure you want to import your data? This will overwrite all data."
+              );
+              if (!shouldContinue) return;
+              const target = e.target as HTMLInputElement;
+              if (target.files && target.files.length > 0) {
+                const file = target.files[0]!;
+                const content = await file.text();
+                setImportEnvFileContents(content);
+                target.value = ""; // Clear the input value
+              }
+            }}
+          />
+          <Textarea
+            value={importEnvFileContents}
+            onChange={(e) => setImportEnvFileContents(e.target.value)}
+            className="h-40 w-full resize-none"
+            placeholder="Or paste your .env file contents here"
+          />
+          <Button variant="default" className="w-full" onClick={importEnvFile}>
+            Import
+          </Button>
+        </div>
+      </dialog>
+
+      <SecretModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingSecret(undefined);
+        }}
+        secret={editingSecret}
+        onSave={handleSaveSecret}
+      />
     </div>
   );
 };

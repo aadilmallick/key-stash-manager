@@ -7,6 +7,10 @@ export function setLocalStorage(data: Record<string, unknown>) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+export function getLocalStorage() {
+  return localStorage.getItem(STORAGE_KEY);
+}
+
 const defaultData: SecretsData = {
   folders: [
     {
