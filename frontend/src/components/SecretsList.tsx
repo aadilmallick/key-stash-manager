@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useSecretsStore } from "../store/secretsStore";
+import { setLocalStorage, useSecretsStore } from "../store/secretsStore";
 import { Secret } from "../types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,10 +14,17 @@ import {
   Copy,
   Check,
   Loader2,
+  Import,
+  LucideXCircle,
 } from "lucide-react";
 import SecretModal from "./SecretModal";
 import { useToast } from "@/components/ui/use-toast";
 import useSync from "@/hooks/useSync";
+import { HideDialogButton, ToggleDialogButton } from "./custom/PopoverButtons";
+import { Dialog, DialogContent, DialogTitle } from "@radix-ui/react-dialog";
+import { DialogHeader } from "./ui/dialog";
+import { Label } from "recharts";
+import { parseToAppJSON } from "@/lib/utils";
 
 const SecretsList = () => {
   const {
@@ -32,6 +39,7 @@ const SecretsList = () => {
     deleteSecret,
     getFilteredSecrets,
     getAllTags,
+    loadData,
   } = useSecretsStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -222,10 +230,20 @@ const SecretsList = () => {
           <h1 className="text-2xl font-bold text-gray-900">
             {selectedFolder?.name || "Secrets"}
           </h1>
-          <Button onClick={() => setIsModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Secret
-          </Button>
+          <div className="flex gap-x-2">
+            <ToggleDialogButton
+              dialogid="import-modal"
+              variant="ghost"
+              className="border-2 border-gray-900 cursor-pointer"
+            >
+              <Import className="h-4 w-4 mr-2" />
+              Import Secrets
+            </ToggleDialogButton>
+            <Button onClick={() => setIsModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Secret
+            </Button>
+          </div>
         </div>
 
         <div className="flex gap-4 mb-4">
@@ -286,15 +304,68 @@ const SecretsList = () => {
         <List />
       )}
 
-      <SecretModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingSecret(undefined);
-        }}
-        secret={editingSecret}
-        onSave={handleSaveSecret}
-      />
+      <dialog
+        id="import-modal"
+        className="px-4 py-12 rounded-lg border-2 border-gray-300 bg-white relative space-y-2"
+      >
+        <HideDialogButton
+          dialogid="import-modal"
+          className="absolute top-1 right-1 cursor-pointer"
+          variant="ghost"
+        >
+          <LucideXCircle color="red" className="w-8 h-8" />
+        </HideDialogButton>
+        <p className="text-sm text-muted-foreground">
+          You can override all current secrets, folders, and tags by importing a
+          JSON file (one that's exported from this website)
+        </p>
+        <p className="text-red-400 text-sm mb-4">
+          Caution: this will override all current data, which is irrecoverable.
+        </p>
+
+        <div>
+          <Label>Name</Label>
+          <Input
+            id="json file"
+            type="file"
+            placeholder="jsonfile.txt"
+            multiple={false}
+            onChange={async (e) => {
+              const shouldContinue = confirm(
+                "are you sure you want to import your data? This will overwrite all data."
+              );
+              if (!shouldContinue) return;
+              const target = e.target as HTMLInputElement;
+              if (target.files && target.files.length > 0) {
+                const file = target.files[0]!;
+                const content = await file.text();
+                const parsedData = parseToAppJSON(content);
+                if (!parsedData) {
+                  // toast({})
+                  toast({
+                    title: "Import failed",
+                    description:
+                      "Failed to import JSON data. Structure is malformed.",
+                    variant: "destructive",
+                  });
+                } else {
+                  startSyncLoading();
+                  setLocalStorage(parsedData);
+                  loadData();
+                  stopSyncLoading();
+                }
+                target.value = ""; // Clear the input value
+              }
+            }}
+          />
+        </div>
+
+        {/* <div className="flex gap-2 justify-end">
+            <Button variant="default">
+              Import
+            </Button>
+          </div> */}
+      </dialog>
     </div>
   );
 };

@@ -1,17 +1,20 @@
+import { create } from "zustand";
+import { Secret, Folder, SecretsData } from "../types";
 
-import { create } from 'zustand';
-import { Secret, Folder, SecretsData } from '../types';
+const STORAGE_KEY = "api-key-manager-secrets";
 
-const STORAGE_KEY = 'api-key-manager-secrets';
+export function setLocalStorage(data: Record<string, unknown>) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
 
 const defaultData: SecretsData = {
   folders: [
     {
-      id: 'default',
-      name: 'Default',
-      secrets: []
-    }
-  ]
+      id: "default",
+      name: "Default",
+      secrets: [],
+    },
+  ],
 };
 
 interface SecretsStore {
@@ -24,8 +27,15 @@ interface SecretsStore {
   addFolder: (name: string) => void;
   deleteFolder: (folderId: string) => void;
   renameFolder: (folderId: string, newName: string) => void;
-  addSecret: (folderId: string, secret: Omit<Secret, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateSecret: (folderId: string, secretId: string, updates: Partial<Secret>) => void;
+  addSecret: (
+    folderId: string,
+    secret: Omit<Secret, "id" | "createdAt" | "updatedAt">
+  ) => void;
+  updateSecret: (
+    folderId: string,
+    secretId: string,
+    updates: Partial<Secret>
+  ) => void;
   deleteSecret: (folderId: string, secretId: string) => void;
   setSelectedFolder: (folderId: string) => void;
   setSearchTerm: (term: string) => void;
@@ -36,8 +46,8 @@ interface SecretsStore {
 
 export const useSecretsStore = create<SecretsStore>((set, get) => ({
   data: defaultData,
-  selectedFolderId: 'default',
-  searchTerm: '',
+  selectedFolderId: "default",
+  searchTerm: "",
   selectedTags: [],
 
   loadData: () => {
@@ -50,7 +60,7 @@ export const useSecretsStore = create<SecretsStore>((set, get) => ({
         localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
       }
     } catch (error) {
-      console.error('Failed to load data:', error);
+      console.error("Failed to load data:", error);
       set({ data: defaultData });
     }
   },
@@ -60,7 +70,7 @@ export const useSecretsStore = create<SecretsStore>((set, get) => ({
       const { data } = get();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
-      console.error('Failed to save data:', error);
+      console.error("Failed to save data:", error);
     }
   },
 
@@ -68,36 +78,39 @@ export const useSecretsStore = create<SecretsStore>((set, get) => ({
     const newFolder: Folder = {
       id: crypto.randomUUID(),
       name,
-      secrets: []
+      secrets: [],
     };
-    set(state => ({
+    set((state) => ({
       data: {
         ...state.data,
-        folders: [...state.data.folders, newFolder]
-      }
+        folders: [...state.data.folders, newFolder],
+      },
     }));
     get().saveData();
   },
 
   deleteFolder: (folderId: string) => {
-    set(state => ({
+    set((state) => ({
       data: {
         ...state.data,
-        folders: state.data.folders.filter(f => f.id !== folderId)
+        folders: state.data.folders.filter((f) => f.id !== folderId),
       },
-      selectedFolderId: state.selectedFolderId === folderId ? 'default' : state.selectedFolderId
+      selectedFolderId:
+        state.selectedFolderId === folderId
+          ? "default"
+          : state.selectedFolderId,
     }));
     get().saveData();
   },
 
   renameFolder: (folderId: string, newName: string) => {
-    set(state => ({
+    set((state) => ({
       data: {
         ...state.data,
-        folders: state.data.folders.map(f => 
+        folders: state.data.folders.map((f) =>
           f.id === folderId ? { ...f, name: newName } : f
-        )
-      }
+        ),
+      },
     }));
     get().saveData();
   },
@@ -108,53 +121,51 @@ export const useSecretsStore = create<SecretsStore>((set, get) => ({
       ...secretData,
       id: crypto.randomUUID(),
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     };
 
-    set(state => ({
+    set((state) => ({
       data: {
         ...state.data,
-        folders: state.data.folders.map(f => 
-          f.id === folderId 
-            ? { ...f, secrets: [...f.secrets, newSecret] }
-            : f
-        )
-      }
+        folders: state.data.folders.map((f) =>
+          f.id === folderId ? { ...f, secrets: [...f.secrets, newSecret] } : f
+        ),
+      },
     }));
     get().saveData();
   },
 
   updateSecret: (folderId: string, secretId: string, updates) => {
-    set(state => ({
+    set((state) => ({
       data: {
         ...state.data,
-        folders: state.data.folders.map(f => 
-          f.id === folderId 
+        folders: state.data.folders.map((f) =>
+          f.id === folderId
             ? {
                 ...f,
-                secrets: f.secrets.map(s => 
-                  s.id === secretId 
+                secrets: f.secrets.map((s) =>
+                  s.id === secretId
                     ? { ...s, ...updates, updatedAt: new Date().toISOString() }
                     : s
-                )
+                ),
               }
             : f
-        )
-      }
+        ),
+      },
     }));
     get().saveData();
   },
 
   deleteSecret: (folderId: string, secretId: string) => {
-    set(state => ({
+    set((state) => ({
       data: {
         ...state.data,
-        folders: state.data.folders.map(f => 
-          f.id === folderId 
-            ? { ...f, secrets: f.secrets.filter(s => s.id !== secretId) }
+        folders: state.data.folders.map((f) =>
+          f.id === folderId
+            ? { ...f, secrets: f.secrets.filter((s) => s.id !== secretId) }
             : f
-        )
-      }
+        ),
+      },
     }));
     get().saveData();
   },
@@ -173,16 +184,18 @@ export const useSecretsStore = create<SecretsStore>((set, get) => ({
 
   getFilteredSecrets: () => {
     const { data, selectedFolderId, searchTerm, selectedTags } = get();
-    const folder = data.folders.find(f => f.id === selectedFolderId);
+    const folder = data.folders.find((f) => f.id === selectedFolderId);
     if (!folder) return [];
 
-    return folder.secrets.filter(secret => {
-      const matchesSearch = !searchTerm || 
+    return folder.secrets.filter((secret) => {
+      const matchesSearch =
+        !searchTerm ||
         secret.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         secret.value.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesTags = selectedTags.length === 0 || 
-        selectedTags.every(tag => secret.tags.includes(tag));
+
+      const matchesTags =
+        selectedTags.length === 0 ||
+        selectedTags.every((tag) => secret.tags.includes(tag));
 
       return matchesSearch && matchesTags;
     });
@@ -191,11 +204,11 @@ export const useSecretsStore = create<SecretsStore>((set, get) => ({
   getAllTags: () => {
     const { data } = get();
     const allTags = new Set<string>();
-    data.folders.forEach(folder => {
-      folder.secrets.forEach(secret => {
-        secret.tags.forEach(tag => allTags.add(tag));
+    data.folders.forEach((folder) => {
+      folder.secrets.forEach((secret) => {
+        secret.tags.forEach((tag) => allTags.add(tag));
       });
     });
     return Array.from(allTags).sort();
-  }
+  },
 }));

@@ -10,7 +10,10 @@ async function main() {
     const data = await response.json();
     localStorage.setItem("api-key-manager-secrets", JSON.stringify(data));
   } catch (error) {
-    console.error("Error occurred:", error);
+    console.error(
+      "Error occurred while trying to fetch /api/sync: does the server exist?",
+      error
+    );
   }
 }
 
