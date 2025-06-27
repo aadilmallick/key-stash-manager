@@ -4,7 +4,7 @@ import {
   setLocalStorage,
   useSecretsStore,
 } from "../store/secretsStore";
-import { Secret } from "../types";
+import { Secret, SecretsData } from "../types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import {
   Import,
   LucideXCircle,
   LucideDownload,
+  LucideFolder,
 } from "lucide-react";
 import SecretModal from "./SecretModal";
 import { useToast } from "@/components/ui/use-toast";
@@ -83,6 +84,10 @@ const SecretsList = () => {
       return newSet;
     });
   };
+
+  async function copyEnv(name: string, value: string, secretId: string) {
+    await copyToClipboard(`${name}=${value}`, secretId);
+  }
 
   const copyToClipboard = async (value: string, secretId: string) => {
     try {
@@ -148,6 +153,46 @@ const SecretsList = () => {
       saveChangesToServer();
     }
   };
+
+  async function onExportFolder() {
+    // const data = JSON.parse(getLocalStorage()) as SecretsData
+    // data.folders.find(folder => folder.id === selectedFolder)
+    try {
+      const strings = selectedFolder.secrets.map(
+        (secret) => `${secret.name}=${secret.value}`
+      );
+      const envContents = strings.join("\n");
+      await navigator.clipboard.writeText(envContents);
+      toast({
+        title: "Copied to clipboard",
+        description: "Copied folder as .env to clipbaord",
+      });
+
+      const blob = new Blob([envContents], {
+        type: "text/plain",
+      });
+      const file = new File([blob], ".env", {
+        type: "text/plain",
+      });
+      const link = document.createElement("a");
+      const blobUrl = URL.createObjectURL(file);
+      link.download = ".env";
+      link.href = blobUrl;
+      link.click();
+      link.remove();
+      toast({
+        title: "export succeeded",
+        description: "Make sure to keep your secrets safe!",
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Copy failed",
+        description: "Failed to copy to clipboard.",
+        variant: "destructive",
+      });
+    }
+  }
 
   function importEnvFile() {
     console.log("importEnvFile", importEnvFileContents);
@@ -241,9 +286,9 @@ const SecretsList = () => {
       loadData();
       stopSyncLoading();
       toast({
-        title: "Import failed",
-        description: "Failed to import JSON data. Structure is malformed.",
-        variant: "destructive",
+        title: "Import successful",
+        description: "Your secrets have been imported.",
+        variant: "default",
       });
     }
   }
@@ -277,7 +322,7 @@ const SecretsList = () => {
               key={secret.id}
               className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-start md:items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="font-medium text-gray-900">{secret.name}</h3>
@@ -288,34 +333,51 @@ const SecretsList = () => {
                     ))}
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono flex-1">
+                  <div className="flex items-center flex-wrap gap-2">
+                    <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono flex-1 min-w-[12rem] text-ellipsis">
                       {visibleSecrets.has(secret.id)
                         ? secret.value
                         : maskValue(secret.value)}
                     </code>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleSecretVisibility(secret.id)}
-                    >
-                      {visibleSecrets.has(secret.id) ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(secret.value, secret.id)}
-                    >
-                      {copiedSecrets.has(secret.id) ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleSecretVisibility(secret.id)}
+                      >
+                        {visibleSecrets.has(secret.id) ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        title="copy value only"
+                        onClick={() => copyToClipboard(secret.value, secret.id)}
+                      >
+                        {copiedSecrets.has(secret.id) ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        title="copy env-pair only"
+                        onClick={() =>
+                          copyEnv(secret.name, secret.value, secret.id)
+                        }
+                      >
+                        {copiedSecrets.has(secret.id) ? (
+                          <Check className="h-4 w-4" color="#36b328" />
+                        ) : (
+                          <Copy className="h-4 w-4" color="#36b328" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
 
                   <p className="text-xs text-gray-500 mt-2">
@@ -363,6 +425,7 @@ const SecretsList = () => {
             <ToggleDialogButton
               dialogid="import-modal"
               variant="ghost"
+              disabled={isSyncing}
               className="bg-orange-400 border-2 border-orange-700 cursor-pointer"
             >
               <Import className="h-4 w-4 mr-2" />
@@ -371,6 +434,7 @@ const SecretsList = () => {
             <ToggleDialogButton
               dialogid="import-env-modal"
               variant="ghost"
+              disabled={isSyncing}
               className="bg-green-400 border-2 border-green-700 cursor-pointer"
             >
               <Import className="h-4 w-4 mr-2" color="#197a2c" />
@@ -378,6 +442,7 @@ const SecretsList = () => {
             </ToggleDialogButton>
             <Button
               variant="ghost"
+              disabled={isSyncing}
               className="border-2 border-gray-900 cursor-pointer hover:bg-gray-900 hover:text-white transition-colors"
               onClick={onExport}
             >
@@ -385,7 +450,17 @@ const SecretsList = () => {
               Export Secrets
             </Button>
             <Button
+              variant="ghost"
+              disabled={isSyncing}
+              className="border-2 border-gray-900 cursor-pointer hover:bg-gray-900 hover:text-white transition-colors"
+              onClick={onExportFolder}
+            >
+              <LucideFolder className="h-4 w-4 mr-2" />
+              Export Folder
+            </Button>
+            <Button
               className="cursor-pointer"
+              disabled={isSyncing}
               onClick={() => setIsModalOpen(true)}
             >
               <Plus className="h-4 w-4 mr-2" />
