@@ -1,9 +1,9 @@
-
 export interface Secret {
   id: string;
   name: string;
   value: string;
   tags: string[];
+  description?: string;
   createdAt: string;
   updatedAt: string;
 }

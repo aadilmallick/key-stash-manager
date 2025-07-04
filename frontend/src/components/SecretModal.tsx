@@ -23,16 +23,19 @@ const SecretModal = ({ isOpen, onClose, secret, onSave }: SecretModalProps) => {
   const [name, setName] = useState("");
   const [value, setValue] = useState("");
   const [tags, setTags] = useState("");
+  const [description, setDescription] = useState("");
 
   useEffect(() => {
     if (secret) {
       setName(secret.name);
       setValue(secret.value);
       setTags(secret.tags.join(", "));
+      setDescription(secret.description || "");
     } else {
       setName("");
       setValue("");
       setTags("");
+      setDescription("");
     }
   }, [secret, isOpen]);
 
@@ -48,6 +51,7 @@ const SecretModal = ({ isOpen, onClose, secret, onSave }: SecretModalProps) => {
       name: name.trim(),
       value: value.trim(),
       tags: tagsArray,
+      description: description.trim(),
     });
 
     onClose();
@@ -80,6 +84,21 @@ const SecretModal = ({ isOpen, onClose, secret, onSave }: SecretModalProps) => {
               placeholder="Secret value"
               rows={3}
             />
+          </div>
+
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Optional description"
+              rows={2}
+              className="placeholder:text-gray-500"
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              You can add an optional description for this secret.
+            </p>
           </div>
 
           <div>

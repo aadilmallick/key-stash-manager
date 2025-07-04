@@ -332,7 +332,13 @@ const SecretsList = () => {
                       </Badge>
                     ))}
                   </div>
-
+                  {secret.description && (
+                    <div className="mb-2">
+                      <p className="text-sm text-gray-700 line-clamp-1 max-w-[60ch] text-ellipsis">
+                        {secret.description}
+                      </p>
+                    </div>
+                  )}
                   <div className="flex items-center flex-wrap gap-2">
                     <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono flex-1 min-w-[12rem] text-ellipsis">
                       {visibleSecrets.has(secret.id)

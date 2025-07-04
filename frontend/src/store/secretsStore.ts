@@ -123,6 +123,7 @@ export const useSecretsStore = create<SecretsStore>((set, get) => ({
     const now = new Date().toISOString();
     const newSecret: Secret = {
       ...secretData,
+      description: secretData.description || "",
       id: crypto.randomUUID(),
       createdAt: now,
       updatedAt: now,
