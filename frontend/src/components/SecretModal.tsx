@@ -1,39 +1,38 @@
-
-import React, { useState, useEffect } from 'react';
-import { Secret } from '../types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import React, { useState, useEffect } from "react";
+import { Secret } from "../types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { X } from 'lucide-react';
+} from "@/components/ui/dialog";
+import { X } from "lucide-react";
 
 interface SecretModalProps {
   isOpen: boolean;
   onClose: () => void;
   secret?: Secret;
-  onSave: (secretData: Omit<Secret, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onSave: (secretData: Omit<Secret, "id" | "createdAt" | "updatedAt">) => void;
 }
 
 const SecretModal = ({ isOpen, onClose, secret, onSave }: SecretModalProps) => {
-  const [name, setName] = useState('');
-  const [value, setValue] = useState('');
-  const [tags, setTags] = useState('');
+  const [name, setName] = useState("");
+  const [value, setValue] = useState("");
+  const [tags, setTags] = useState("");
 
   useEffect(() => {
     if (secret) {
       setName(secret.name);
       setValue(secret.value);
-      setTags(secret.tags.join(', '));
+      setTags(secret.tags.join(", "));
     } else {
-      setName('');
-      setValue('');
-      setTags('');
+      setName("");
+      setValue("");
+      setTags("");
     }
   }, [secret, isOpen]);
 
@@ -41,14 +40,14 @@ const SecretModal = ({ isOpen, onClose, secret, onSave }: SecretModalProps) => {
     if (!name.trim() || !value.trim()) return;
 
     const tagsArray = tags
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag.length > 0);
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0);
 
     onSave({
       name: name.trim(),
       value: value.trim(),
-      tags: tagsArray
+      tags: tagsArray,
     });
 
     onClose();
@@ -58,11 +57,9 @@ const SecretModal = ({ isOpen, onClose, secret, onSave }: SecretModalProps) => {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {secret ? 'Edit Secret' : 'Add New Secret'}
-          </DialogTitle>
+          <DialogTitle>{secret ? "Edit Secret" : "Add New Secret"}</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div>
             <Label htmlFor="name">Name</Label>
@@ -92,6 +89,7 @@ const SecretModal = ({ isOpen, onClose, secret, onSave }: SecretModalProps) => {
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               placeholder="tag1, tag2, tag3"
+              className="placeholder:text-gray-500"
             />
             <p className="text-sm text-gray-500 mt-1">
               Separate multiple tags with commas
@@ -102,11 +100,11 @@ const SecretModal = ({ isOpen, onClose, secret, onSave }: SecretModalProps) => {
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleSave}
               disabled={!name.trim() || !value.trim()}
             >
-              {secret ? 'Update' : 'Add'} Secret
+              {secret ? "Update" : "Add"} Secret
             </Button>
           </div>
         </div>

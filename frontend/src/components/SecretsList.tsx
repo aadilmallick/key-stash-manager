@@ -307,7 +307,7 @@ const SecretsList = () => {
 
   const List = () => {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 max-h-[60vh] overflow-y-auto pb-8">
         {filteredSecrets.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             {selectedFolder?.secrets.length === 0 ? (
@@ -526,6 +526,8 @@ const SecretsList = () => {
       ) : (
         <List />
       )}
+
+      {/* modals */}
 
       <dialog
         id="import-modal"
