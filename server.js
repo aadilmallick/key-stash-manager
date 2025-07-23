@@ -61,8 +61,8 @@ app.get("/", (req, res) => {
 
 const jsonPath = getFilePath("data", "keys.json");
 
-app.get("/api/sync", async (req, res) => {
-  await upsertJSONFile(jsonPath, {
+function getEmptyRootSchema() {
+  return {
     folders: [
       {
         id: "default",
@@ -70,7 +70,11 @@ app.get("/api/sync", async (req, res) => {
         secrets: [],
       },
     ],
-  });
+  };
+}
+
+app.get("/api/sync", async (req, res) => {
+  await upsertJSONFile(jsonPath, getEmptyRootSchema());
   const data = await readJSONFile(jsonPath);
   res.json(data);
 });

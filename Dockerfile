@@ -10,28 +10,41 @@ ARG NODE_VERSION=24.0.2
 
 FROM node:${NODE_VERSION}-alpine
 
-# Use production node environment by default.
-ENV NODE_ENV production
+# Use development for build to install devDependencies
+ENV NODE_ENV=development
+ENV USING_DOCKER=true
+ENV USING_SERVER=true
 
+# install bash
+RUN apk add --no-cache bash
 
+# Set working directory for all build stages.
+RUN mkdir -p /usr/src/app
+RUN chown -R node:node /usr/src/app
 WORKDIR /usr/src/app
 
-# Download dependencies as a separate step to take advantage of Docker's caching.
-# Leverage a cache mount to /root/.npm to speed up subsequent builds.
-# Leverage a bind mounts to package.json and package-lock.json to avoid having to copy them into
-# into this layer.
-RUN npm ci --omit=dev
+# Copy and install server dependencies
+COPY package.json package-lock.json ./
+RUN npm ci
 
-RUN npm ci --prefix frontend
+# Copy and install frontend dependencies (including devDependencies for build)
+COPY frontend/package.json frontend/package-lock.json ./frontend/
+RUN cd frontend && npm install
 
-# Run the application as a non-root user.
-USER node
-
-# Copy the rest of the source files into the image.
+# Copy the rest of the source code (excluding node_modules via .dockerignore)
 COPY . .
+
+# Build the frontend
+RUN cd frontend && npm run build
+
+# Change to production environment for runtime
+ENV NODE_ENV=production
 
 # Expose the port that the application listens on.
 EXPOSE 5000
 
+# Switch to node user for runtime
+USER node
+
 # Run the application.
-CMD npm start
+CMD ["npm", "start"]

@@ -24,11 +24,14 @@
 **/compose.y*ml
 **/Dockerfile*
 **/node_modules
+node_modules
+frontend/node_modules
 **/npm-debug.log
 **/obj
 **/secrets.dev.yaml
 **/values.dev.yaml
 **/build
 **/dist
+frontend/dist
 LICENSE
 README.md
