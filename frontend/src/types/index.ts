@@ -14,6 +14,15 @@ export interface Folder {
   secrets: Secret[];
 }
 
-export interface SecretsData {
+export interface Profile {
+  id: string;
+  name: string;
   folders: Folder[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SecretsData {
+  profiles: Profile[];
+  currentProfileId: string;
 }

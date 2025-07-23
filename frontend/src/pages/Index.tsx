@@ -2,13 +2,19 @@ import React, { useEffect } from "react";
 import { useSecretsStore } from "../store/secretsStore";
 import FolderSidebar from "../components/FolderSidebar";
 import SecretsList from "../components/SecretsList";
+import useSync from "@/hooks/useSync";
 
 const Index = () => {
-  const { loadData } = useSecretsStore();
+  const {
+    isSyncing,
+    startSyncLoading,
+    stopSyncLoading,
+    pullChangesFromServer,
+  } = useSync();
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    pullChangesFromServer();
+  }, []);
 
   // useEffect(() => {
   //   // create interval to push sync with server every 10 seconds
@@ -27,6 +33,9 @@ const Index = () => {
 
   //   return () => clearInterval(interval);
   // }, []);
+  if (isSyncing) {
+    return <div>Syncing...</div>;
+  }
 
   return (
     <div className="h-screen flex bg-gray-50">

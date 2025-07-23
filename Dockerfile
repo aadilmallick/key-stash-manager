@@ -41,7 +41,8 @@ RUN cd frontend && npm run build
 ENV NODE_ENV=production
 
 # Expose the port that the application listens on.
-EXPOSE 5000
+ENV PORT=5000
+EXPOSE ${PORT}
 
 # Switch to node user for runtime
 USER node

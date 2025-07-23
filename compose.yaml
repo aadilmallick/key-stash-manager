@@ -17,6 +17,26 @@ services:
       - 5000:5000
     volumes:
       - ./data:/usr/src/app/data
+    develop:
+      watch:
+        # it'll watch for changes in package.json and package-lock.json
+        #cand rebuild the container if there are any changes
+        - path: ./package.json
+          action: rebuild
+        - path: ./package-lock.json
+          action: rebuild
+          # needs target as well (container filesystem)
+        - path: ./frontend
+          target: /usr/src/app/frontend
+          action: sync+restart
+          # exec:
+          # command: npm run dev --prefix frontend && npm start
+          # update: always
+          # restart: always
+          # timeout: 10s
+          # retries: 3
+          # start_period: 10s
+          # stop_signal: SIGTERM
 # The commented out section below is an example of how to define a PostgreSQL
 # database that your application can use. `depends_on` tells Docker Compose to
 # start the database before your application. The `db-data` volume persists the
