@@ -41,7 +41,7 @@ const pwaPlugin = VitePWA({
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), isUsingServer ? null : pwaPlugin],
+  plugins: [react(), ...(isUsingServer ? [] : [pwaPlugin])],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
