@@ -6,10 +6,20 @@ import {
 import { SecretsData } from "@/types";
 import React, { useState } from "react";
 
+const isUsingServer =
+  process.env.USING_SERVER === "true" ||
+  import.meta.env.USING_SERVER === "true";
+
 const useSync = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const { setData, loadData } = useSecretsStore();
   async function pushChangesToServer() {
+    // opt out of sync if not using server
+    if (!isUsingServer) {
+      console.log("client side app only. Will not attempt to sync with server");
+      return false;
+    }
+
     if (!localStorage.getItem(STORAGE_KEY)) {
       console.error("No secrets found");
       return;
@@ -29,6 +39,11 @@ const useSync = () => {
   }
 
   async function pullChangesFromServer() {
+    // opt out of sync if not using server
+    if (!isUsingServer) {
+      console.log("client side app only. Will not attempt to sync with server");
+      return false;
+    }
     startSyncLoading();
     try {
       const response = await fetch("/api/sync", {
