@@ -1,7 +1,10 @@
 import React, { useState } from "react";
 import {
   getLocalStorage,
-  handleImport,
+  STORAGE_KEY,
+  handleImportAll,
+  exportProfile,
+  handleImportProfile,
   useSecretsStore,
 } from "../store/secretsStore";
 import { Secret } from "../types";
@@ -302,7 +305,7 @@ const SecretsList = () => {
 
     startSyncLoading();
     try {
-      handleImport(content);
+      handleImportAll(content);
       loadData();
       toast({
         title: "Import successful",
@@ -604,7 +607,7 @@ const SecretsList = () => {
           <List />
         )}
 
-        {/* modals */}
+        {/* for importing all secrets*/}
 
         <dialog
           id="import-modal"
@@ -638,7 +641,7 @@ const SecretsList = () => {
               multiple={false}
               onChange={async (e) => {
                 const shouldContinue = confirm(
-                  "are you sure you want to import your data? This will overwrite all data."
+                  "are you sure you want to import your data? This will overwrite all data for all profiles."
                 );
                 if (!shouldContinue) return;
                 const target = e.target as HTMLInputElement;
@@ -651,6 +654,8 @@ const SecretsList = () => {
             />
           </div>
         </dialog>
+
+        {/*  for importing .env files or text content */}
 
         <dialog
           id="import-env-modal"

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { Secret, Folder, Profile, SecretsData } from "../types";
 import { z } from "zod";
+import { ObjectSet } from "@/lib/ObjectSet";
 
 export const STORAGE_KEY = "api-key-manager-secrets";
 
@@ -34,7 +35,6 @@ const importSchemaV1 = z.object({
 });
 
 // the new import schema (export as profile)
-const importSchemaV2 = profileZodSchema;
 export const secretsDataSchema = z.object({
   profiles: z.array(profileZodSchema),
   currentProfileId: z.string(),
@@ -44,32 +44,37 @@ export function getLocalStorage() {
   return localStorage.getItem(STORAGE_KEY);
 }
 
-function handleImportV2(data: string) {
+function handleImportAllSecrets(data: string) {
   try {
-    const parsedProfile = importSchemaV2.parse(JSON.parse(data));
-    const localStorageData = JSON.parse(getLocalStorage() || "{}");
-    // Check if profile with same ID exists
-    const existingProfileIndex = localStorageData.profiles.findIndex(
-      (p: Profile) => p.id === parsedProfile.id
-    );
+    const parsedData = secretsDataSchema.parse(JSON.parse(data));
+    // const localStorageData = JSON.parse(getLocalStorage() || "{}");
+    // // Check if profile with same ID exists
+    // const existingProfileIndex = localStorageData.profiles.findIndex(
+    //   (p: Profile) => p.id === parsedProfile.id
+    // );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(parsedData));
+    return true;
 
-    if (existingProfileIndex !== -1) {
-      const shouldOverwrite = confirm(
-        `A profile with ID "${parsedProfile.id}" and name "${parsedProfile.name}" already exists. Do you want to overwrite it?`
-      );
-      console.log("shouldOverwrite", shouldOverwrite);
-      if (shouldOverwrite) {
-        localStorageData.profiles[existingProfileIndex] = parsedProfile;
-      } else {
-        return false;
-      }
-    } else {
-      localStorageData.profiles.push(parsedProfile);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(localStorageData));
-      return true;
-    }
+    // if (existingProfileIndex !== -1) {
+    //   const shouldOverwrite = confirm(
+    //     `A profile with ID "${parsedProfile.id}" and name "${parsedProfile.name}" already exists. Do you want to overwrite it?`
+    //   );
+    //   console.log("shouldOverwrite", shouldOverwrite);
+    //   if (shouldOverwrite) {
+    //     localStorageData.profiles[existingProfileIndex] = parsedProfile;
+    //   } else {
+    //     return false;
+    //   }
+    // } else {
+    //   localStorageData.profiles.push(parsedProfile);
+    //   localStorage.setItem(STORAGE_KEY, JSON.stringify(localStorageData));
+    //   return true;
+    // }
   } catch (error) {
-    console.error("Failed to handle import:", error);
+    console.error(
+      "Failed to handle importing all secrets and profiles:",
+      error
+    );
     return false;
   }
 }
@@ -77,7 +82,9 @@ function handleImportV2(data: string) {
 function handleImportV1(data: string) {
   try {
     const parsedProfile = importSchemaV1.parse(JSON.parse(data));
-    const localStorageData = JSON.parse(getLocalStorage() || "{}");
+    const localStorageData = secretsDataSchema.parse(
+      JSON.parse(getLocalStorage() || "{}")
+    );
     localStorageData.profiles.push(parsedProfile);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(localStorageData));
     return true;
@@ -87,9 +94,9 @@ function handleImportV1(data: string) {
   }
 }
 
-export function handleImport(data: string) {
+export function handleImportAll(data: string) {
   let success = false;
-  success = handleImportV2(data);
+  success = handleImportAllSecrets(data);
   if (!success) {
     success = handleImportV1(data);
   }
@@ -98,7 +105,32 @@ export function handleImport(data: string) {
   }
 }
 
-export function exportProfile(profile: Profile) {}
+export function exportProfile(profile: Profile) {
+  const data = JSON.stringify(profile);
+  const blob = new Blob([data], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `export-profile-${profile.name}-${profile.id.slice(0, 8)}.json`;
+  a.click();
+  a.remove();
+}
+
+export function handleImportProfile(data: string) {
+  const parsedProfile = profileZodSchema.parse(JSON.parse(data));
+  const localStorageData = secretsDataSchema.parse(
+    JSON.parse(getLocalStorage() || "{}")
+  );
+  const profileObjectSet = new ObjectSet<Profile>(
+    localStorageData.profiles as Profile[]
+  );
+
+  profileObjectSet.add(parsedProfile as Profile);
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(profileObjectSet.getAllData())
+  );
+}
 
 const createDefaultProfile = (): Profile => ({
   id: "default",

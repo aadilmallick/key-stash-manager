@@ -4,15 +4,6 @@ import { twMerge } from "tailwind-merge";
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
-
-type Schema = {
-  folders: {
-    id: string;
-    name: string;
-    secrets: Record<string, unknown>[];
-  }[];
-};
-
 // export function parseToAppJSON(data: string): Schema | null {
 //   try {
 //     const newData = JSON.parse(data);

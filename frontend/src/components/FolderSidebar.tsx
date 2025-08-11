@@ -144,7 +144,7 @@ const FolderSidebar = () => {
         {currentProfile.folders.map((folder) => (
           <div
             key={folder.id}
-            className={`flex items-center justify-between p-2 rounded-md cursor-pointer group ${
+            className={`flex items-center justify-between flex-wrap gap-y-2 p-2 rounded-md cursor-pointer group ${
               selectedFolderId === folder.id
                 ? "bg-blue-100 text-blue-900"
                 : "hover:bg-gray-100"
