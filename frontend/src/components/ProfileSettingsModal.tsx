@@ -10,8 +10,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Plus, Check, X, User, Settings } from "lucide-react";
+import {
+  Edit,
+  Trash2,
+  Plus,
+  Check,
+  X,
+  User,
+  Settings,
+  Download,
+  Upload,
+} from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  exportProfile,
+  handleImportProfile as importProfileFromStore,
+} from "../store/secretsStore";
 
 interface ProfileSettingsModalProps {
   isOpen: boolean;
@@ -145,6 +159,54 @@ const ProfileSettingsModal = ({
     setEditingProfileName("");
   };
 
+  const handleExportProfile = (profile: any) => {
+    try {
+      exportProfile(profile);
+      toast({
+        title: "Success",
+        description: `Profile "${profile.name}" exported successfully`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to export profile",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleImportProfile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        importProfileFromStore(content);
+
+        // Reload data to show the imported profile
+        window.location.reload();
+
+        toast({
+          title: "Success",
+          description: "Profile imported successfully",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description:
+            "Failed to import profile. Please check the file format.",
+          variant: "destructive",
+        });
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset the input
+    event.target.value = "";
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -177,6 +239,41 @@ const ProfileSettingsModal = ({
                 </p>
               </div>
               <Badge variant="default">Active</Badge>
+            </div>
+          </div>
+
+          {/* Import/Export Profiles */}
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">
+              Import/Export Profiles
+            </Label>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  document.getElementById("import-profile")?.click()
+                }
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Import Profile
+              </Button>
+              <input
+                id="import-profile"
+                type="file"
+                accept=".json"
+                onChange={handleImportProfile}
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                onClick={() =>
+                  currentProfile && handleExportProfile(currentProfile)
+                }
+                disabled={!currentProfile}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export Current Profile
+              </Button>
             </div>
           </div>
 
