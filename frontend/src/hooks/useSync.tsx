@@ -3,7 +3,7 @@ import { fetchFromServer, isUsingServer } from "@/lib/SyncUtils";
 import { SecretsData } from "@/types";
 import React, { useState } from "react";
 
-const useSync = () => {
+export const useSync = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const { setData, loadData } = useSecretsStore();
   async function pushChangesToServer() {
@@ -32,9 +32,9 @@ const useSync = () => {
   }
 
   async function pullChangesFromServer() {
-    // opt out of sync if not using server
+    // If not using server, always load from localStorage
     if (!isUsingServer) {
-      console.log("client side app only. Will not attempt to sync with server");
+      loadData();
       return false;
     }
     startSyncLoading();
@@ -42,6 +42,9 @@ const useSync = () => {
       const data = await fetchFromServer();
       if (data) {
         setData(data as SecretsData);
+      } else {
+        // Fallback to local storage if server returns nothing
+        loadData();
       }
     } catch (e) {
       loadData();
@@ -65,5 +68,3 @@ const useSync = () => {
     pullChangesFromServer,
   };
 };
-
-export default useSync;

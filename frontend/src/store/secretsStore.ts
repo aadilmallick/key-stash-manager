@@ -22,12 +22,28 @@ export function getLocalStorage() {
 function handleImportAllSecrets(data: string) {
   try {
     const parsedData = secretsDataSchema.parse(JSON.parse(data));
-    // const localStorageData = JSON.parse(getLocalStorage() || "{}");
-    // // Check if profile with same ID exists
-    // const existingProfileIndex = localStorageData.profiles.findIndex(
-    //   (p: Profile) => p.id === parsedProfile.id
-    // );
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(parsedData));
+    // Ensure there is at least one profile and a valid currentProfileId
+    if (!parsedData.profiles || parsedData.profiles.length === 0) {
+      throw new Error("No profiles provided");
+    }
+    const hasCurrent = parsedData.profiles.some(
+      (p) => p.id === parsedData.currentProfileId
+    );
+    const normalized = hasCurrent
+      ? parsedData
+      : ({
+          ...parsedData,
+          currentProfileId: parsedData.profiles[0].id,
+        } as SecretsData);
+
+    // Normalize: ensure each profile has createdAt/updatedAt
+    normalized.profiles = normalized.profiles.map((p) => ({
+      ...p,
+      createdAt: p.createdAt || new Date().toISOString(),
+      updatedAt: p.updatedAt || new Date().toISOString(),
+    }));
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
     return true;
 
     // if (existingProfileIndex !== -1) {
@@ -57,11 +73,26 @@ function handleImportAllSecrets(data: string) {
 function handleImportV1(data: string) {
   try {
     const parsedProfile = importSchemaV1.parse(JSON.parse(data));
-    const localStorageData = secretsDataSchema.parse(
-      JSON.parse(getLocalStorage() || "{}")
-    );
-    localStorageData.profiles.push(parsedProfile);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(localStorageData));
+    // Migrate V1 (single folders array) into a Profile and append
+    const stored = getLocalStorage();
+    const base = stored
+      ? secretsDataSchema.parse(JSON.parse(stored))
+      : ({ profiles: [], currentProfileId: "" } as SecretsData);
+
+    const newProfile: Profile = {
+      id: crypto.randomUUID(),
+      name: "Imported",
+      folders: parsedProfile.folders as any,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const merged: SecretsData = {
+      profiles: [...base.profiles, newProfile] as Profile[],
+      currentProfileId: base.currentProfileId || newProfile.id,
+    };
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
     return true;
   } catch (error) {
     console.error("Failed to handle import:", error);
@@ -70,14 +101,9 @@ function handleImportV1(data: string) {
 }
 
 export function handleImportAll(data: string) {
-  let success = false;
-  success = handleImportAllSecrets(data);
-  if (!success) {
-    success = handleImportV1(data);
-  }
-  if (!success) {
-    throw new Error("Failed to handle import");
-  }
+  // Try full dataset import first; if that fails, try legacy V1
+  const success = handleImportAllSecrets(data) || handleImportV1(data);
+  if (!success) throw new Error("Failed to handle import");
 }
 
 export function exportProfile(profile: Profile) {
@@ -91,20 +117,62 @@ export function exportProfile(profile: Profile) {
   a.remove();
 }
 
-export function handleImportProfile(data: string) {
-  const parsedProfile = profileZodSchema.parse(JSON.parse(data));
-  const localStorageData = secretsDataSchema.parse(
-    JSON.parse(getLocalStorage() || "{}")
-  );
-  const profileObjectSet = new ObjectSet<Profile>(
-    localStorageData.profiles as Profile[]
-  );
+export function exportAllProfiles(profilesData: SecretsData) {
+  const data = JSON.stringify(profilesData);
+  const blob = new Blob([data], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `export-all-profiles-${
+    new Date().toISOString().split("T")[0]
+  }.json`;
+  a.click();
+  a.remove();
+}
 
-  profileObjectSet.add(parsedProfile as Profile);
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(profileObjectSet.getAllData())
-  );
+export function handleImportProfile(data: string) {
+  try {
+    const parsedProfile = profileZodSchema.parse(JSON.parse(data));
+    const localStorageData = secretsDataSchema.parse(
+      JSON.parse(getLocalStorage() || "{}")
+    );
+
+    // Check for duplicate profile ID
+    const existingProfileById = localStorageData.profiles.find(
+      (p) => p.id === parsedProfile.id
+    );
+
+    // Check for duplicate profile name
+    const existingProfileByName = localStorageData.profiles.find(
+      (p) => p.name === parsedProfile.name
+    );
+
+    if (existingProfileById || existingProfileByName) {
+      // Generate new unique ID and name to avoid conflicts
+      const newProfile = {
+        ...parsedProfile,
+        id: crypto.randomUUID(),
+        name: existingProfileByName
+          ? `${
+              parsedProfile.name
+            } (Imported ${new Date().toLocaleDateString()})`
+          : parsedProfile.name,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as Profile;
+
+      localStorageData.profiles.push(newProfile);
+    } else {
+      // No conflicts, add as-is
+      localStorageData.profiles.push(parsedProfile);
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(localStorageData));
+    return true;
+  } catch (error) {
+    console.error("Failed to import profile:", error);
+    throw new Error("Invalid profile data format");
+  }
 }
 
 const createDefaultProfile = (): Profile => ({
@@ -134,6 +202,7 @@ interface SecretsStore {
   loadData: () => void;
   saveData: () => void;
   setData: (data: SecretsData) => void;
+  refreshData: () => void;
 
   // Profile operations
   addProfile: (name: string) => void;
@@ -141,6 +210,8 @@ interface SecretsStore {
   renameProfile: (profileId: string, newName: string) => void;
   setCurrentProfile: (profileId: string) => void;
   getCurrentProfile: () => Profile | undefined;
+  exportAllProfiles: () => void;
+  exportCurrentProfile: () => void;
 
   // Folder operations (profile-aware)
   addFolder: (name: string) => void;
@@ -206,7 +277,14 @@ export const useSecretsStore = create<SecretsStore>((set, get) => ({
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const data = migrateOldData(stored);
-        set({ data });
+        // Ensure currentProfileId points to an existing profile
+        const currentExists = data.profiles.some(
+          (p) => p.id === data.currentProfileId
+        );
+        const normalized: SecretsData = currentExists
+          ? data
+          : { ...data, currentProfileId: data.profiles[0]?.id || "default" };
+        set({ data: normalized });
 
         // Ensure selected folder exists in current profile
         const currentProfile = data.profiles.find(
@@ -236,6 +314,10 @@ export const useSecretsStore = create<SecretsStore>((set, get) => ({
     } catch (error) {
       console.error("Failed to save data:", error);
     }
+  },
+
+  refreshData: () => {
+    get().loadData();
   },
 
   // Profile operations
@@ -326,6 +408,21 @@ export const useSecretsStore = create<SecretsStore>((set, get) => ({
   getCurrentProfile: () => {
     const { data } = get();
     return data.profiles.find((p) => p.id === data.currentProfileId);
+  },
+
+  exportAllProfiles: () => {
+    const { data } = get();
+    exportAllProfiles(data);
+  },
+
+  exportCurrentProfile: () => {
+    const { data } = get();
+    const currentProfile = data.profiles.find(
+      (p) => p.id === data.currentProfileId
+    );
+    if (currentProfile) {
+      exportProfile(currentProfile);
+    }
   },
 
   // Folder operations (profile-aware)

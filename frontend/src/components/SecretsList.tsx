@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import SecretModal from "./SecretModal";
 import { useToast } from "@/components/ui/use-toast";
-import useSync from "@/hooks/useSync";
+import { useSync } from "@/hooks/useSync";
 import { HideDialogButton, ToggleDialogButton } from "./custom/PopoverButtons";
 import { Dialog, DialogContent, DialogTitle } from "@radix-ui/react-dialog";
 import { DialogHeader } from "./ui/dialog";
@@ -56,6 +56,9 @@ const SecretsList = () => {
     getAllTags,
     loadData,
     getCurrentProfile,
+    refreshData,
+    exportAllProfiles,
+    exportCurrentProfile,
   } = useSecretsStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -127,34 +130,20 @@ const SecretsList = () => {
   };
 
   function onExport() {
-    // const data = JSON.parse()
-    const currentProfile = getCurrentProfile();
-    if (!currentProfile) {
+    try {
+      exportAllProfiles();
+      toast({
+        title: "Export succeeded",
+        description: "All profiles exported successfully!",
+        variant: "default",
+      });
+    } catch (error) {
       toast({
         title: "Export failed",
-        description: "No profile selected",
+        description: "Failed to export profiles",
         variant: "destructive",
       });
-      return;
     }
-    const blob = new Blob([JSON.stringify(currentProfile)], {
-      type: "application/json",
-    });
-    const file = new File([blob], "export-secrets.json", {
-      type: "application/json",
-    });
-    const link = document.createElement("a");
-    const blobUrl = URL.createObjectURL(file);
-    link.download = "export-secrets.json";
-    link.href = blobUrl;
-    link.click();
-    link.remove();
-    console.log("clicked");
-    toast({
-      title: "export succeeded",
-      description: "Make sure to keep your secrets safe!",
-      variant: "default",
-    });
   }
 
   const handleSaveSecret = (
@@ -306,7 +295,7 @@ const SecretsList = () => {
     startSyncLoading();
     try {
       handleImportAll(content);
-      loadData();
+      refreshData();
       toast({
         title: "Import successful",
         description: "Your secrets have been imported.",
@@ -527,8 +516,17 @@ const SecretsList = () => {
                 onClick={onExport}
               >
                 <LucideDownload className="h-4 w-4 mr-2" />
-                Export Secrets
+                Export All Profiles
               </Button>
+              {/* <Button
+                variant="ghost"
+                disabled={isSyncing}
+                className="border-2 border-gray-900 cursor-pointer hover:bg-gray-900 hover:text-white transition-colors bg-green-200 text-black"
+                onClick={() => exportCurrentProfile()}
+              >
+                <LucideDownload className="h-4 w-4 mr-2" />
+                Export Current Profile
+              </Button> */}
               <Button
                 variant="ghost"
                 disabled={isSyncing}

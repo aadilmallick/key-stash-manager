@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useSecretsStore } from "../store/secretsStore";
 import FolderSidebar from "../components/FolderSidebar";
 import SecretsList from "../components/SecretsList";
-import useSync from "@/hooks/useSync";
+import { useSync } from "@/hooks/useSync";
 
 const Index = () => {
   const {

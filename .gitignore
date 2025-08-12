@@ -3,3 +3,4 @@ keys.json
 .env
 data/
 .vite/
+example-full-export.json

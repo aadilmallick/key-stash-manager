@@ -22,10 +22,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  exportProfile,
-  handleImportProfile as importProfileFromStore,
-} from "../store/secretsStore";
+import { handleImportProfile as importProfileFromStore } from "../store/secretsStore";
 
 interface ProfileSettingsModalProps {
   isOpen: boolean;
@@ -43,6 +40,9 @@ const ProfileSettingsModal = ({
     renameProfile,
     setCurrentProfile,
     getCurrentProfile,
+    refreshData,
+    exportAllProfiles,
+    exportCurrentProfile,
   } = useSecretsStore();
 
   const [newProfileName, setNewProfileName] = useState("");
@@ -159,22 +159,6 @@ const ProfileSettingsModal = ({
     setEditingProfileName("");
   };
 
-  const handleExportProfile = (profile: any) => {
-    try {
-      exportProfile(profile);
-      toast({
-        title: "Success",
-        description: `Profile "${profile.name}" exported successfully`,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to export profile",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleImportProfile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -185,8 +169,8 @@ const ProfileSettingsModal = ({
         const content = e.target?.result as string;
         importProfileFromStore(content);
 
-        // Reload data to show the imported profile
-        window.location.reload();
+        // Refresh the store data to show the imported profile
+        refreshData();
 
         toast({
           title: "Success",
@@ -266,13 +250,15 @@ const ProfileSettingsModal = ({
               />
               <Button
                 variant="outline"
-                onClick={() =>
-                  currentProfile && handleExportProfile(currentProfile)
-                }
+                onClick={() => exportCurrentProfile()}
                 disabled={!currentProfile}
               >
                 <Download className="h-4 w-4 mr-2" />
                 Export Current Profile
+              </Button>
+              <Button variant="outline" onClick={() => exportAllProfiles()}>
+                <Download className="h-4 w-4 mr-2" />
+                Export All Profiles
               </Button>
             </div>
           </div>
