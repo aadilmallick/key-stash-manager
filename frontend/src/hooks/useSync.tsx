@@ -1,14 +1,7 @@
-import {
-  secretsDataSchema,
-  STORAGE_KEY,
-  useSecretsStore,
-} from "@/store/secretsStore";
+import { STORAGE_KEY, useSecretsStore } from "@/store/secretsStore";
+import { fetchFromServer, isUsingServer } from "@/lib/SyncUtils";
 import { SecretsData } from "@/types";
 import React, { useState } from "react";
-
-const isUsingServer =
-  process.env.USING_SERVER === "true" ||
-  import.meta.env.USING_SERVER === "true";
 
 const useSync = () => {
   const [isSyncing, setIsSyncing] = useState(false);
@@ -46,18 +39,9 @@ const useSync = () => {
     }
     startSyncLoading();
     try {
-      const response = await fetch("/api/sync", {
-        method: "GET",
-      });
-      if (response.ok) {
-        console.log("Pulled changes from server");
-        const storage = await response.json();
-        const parsed = secretsDataSchema.parse(storage);
-        if (parsed) {
-          setData(parsed as SecretsData);
-        }
-      } else {
-        console.error("Failed to pull changes from server");
+      const data = await fetchFromServer();
+      if (data) {
+        setData(data as SecretsData);
       }
     } catch (e) {
       loadData();

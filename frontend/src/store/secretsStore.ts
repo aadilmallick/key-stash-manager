@@ -1,44 +1,19 @@
 import { create } from "zustand";
-import { Secret, Folder, Profile, SecretsData } from "../types";
+import {
+  Secret,
+  Folder,
+  Profile,
+  SecretsData,
+  secretsDataSchema,
+  folderZodSchema,
+  importSchemaV1,
+  profileZodSchema,
+  secretZodSchema,
+} from "../types";
 import { z } from "zod";
 import { ObjectSet } from "@/lib/ObjectSet";
 
 export const STORAGE_KEY = "api-key-manager-secrets";
-
-const secretZodSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  value: z.string(),
-  tags: z.array(z.string()),
-  description: z.string().optional(),
-  createdAt: z.string().datetime().optional(),
-  updatedAt: z.string().datetime().optional(),
-});
-
-const folderZodSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  secrets: z.array(secretZodSchema),
-});
-
-const profileZodSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  folders: z.array(folderZodSchema),
-  createdAt: z.string().datetime().optional(),
-  updatedAt: z.string().datetime().optional(),
-});
-
-// the old import schema
-const importSchemaV1 = z.object({
-  folders: z.array(folderZodSchema),
-});
-
-// the new import schema (export as profile)
-export const secretsDataSchema = z.object({
-  profiles: z.array(profileZodSchema),
-  currentProfileId: z.string(),
-});
 
 export function getLocalStorage() {
   return localStorage.getItem(STORAGE_KEY);
