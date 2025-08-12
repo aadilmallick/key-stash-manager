@@ -5,7 +5,8 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // if running locally, we don't want to use the pwa plugin
 // if published, we want to use the pwa plugin
-const isUsingServer = process.env.USING_SERVER === "true";
+const isUsingServer = process.env.VITE_USING_SERVER === "true";
+console.log("isUsingServer", isUsingServer);
 
 const pwaPlugin = VitePWA({
   registerType: "autoUpdate",
@@ -39,9 +40,14 @@ const pwaPlugin = VitePWA({
   },
 });
 
+const plugins = [react()];
+if (!isUsingServer) {
+  plugins.push(pwaPlugin);
+}
+console.log("plugins", plugins.length);
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), ...(isUsingServer ? [] : [pwaPlugin])],
+  plugins,
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

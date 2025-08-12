@@ -7,6 +7,7 @@ const { z } = require("zod");
 const dotenv = require("dotenv");
 
 dotenv.config();
+console.log(process.env.USING_SERVER);
 
 const getFilePath = (...pathSegments) => path.join(__dirname, ...pathSegments);
 

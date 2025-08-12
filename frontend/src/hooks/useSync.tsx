@@ -54,6 +54,17 @@ export const useSync = () => {
     }
   }
 
+  async function saveChangesToServer() {
+    try {
+      startSyncLoading();
+      await pushChangesToServer();
+      console.log("saved changes to server");
+      stopSyncLoading();
+    } catch (e) {
+      stopSyncLoading();
+    }
+  }
+
   const startSyncLoading = () => {
     setIsSyncing(true);
   };
@@ -66,5 +77,6 @@ export const useSync = () => {
     startSyncLoading,
     stopSyncLoading,
     pullChangesFromServer,
+    saveChangesToServer,
   };
 };

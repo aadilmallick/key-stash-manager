@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "export USING_SERVER=true && node server.js",
-    "start-background": "npm run build --prefix frontend && node server.js &",
-    "dev": "export USING_SERVER=true && npm run build --prefix frontend && node server.js"
+    "start": "export VITE_USING_SERVER=true && node server.js",
+    "start-background": "export VITE_USING_SERVER=true && npm run build --prefix frontend && node server.js &",
+    "dev": "export VITE_USING_SERVER=true && npm run build --prefix frontend && node server.js"
   },
   "repository": {
     "type": "git",

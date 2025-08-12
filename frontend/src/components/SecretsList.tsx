@@ -66,21 +66,15 @@ const SecretsList = () => {
   const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set());
   const [copiedSecrets, setCopiedSecrets] = useState<Set<string>>(new Set());
   const { toast } = useToast();
-  const { pushChangesToServer, isSyncing, startSyncLoading, stopSyncLoading } =
-    useSync();
+  const {
+    pushChangesToServer,
+    isSyncing,
+    startSyncLoading,
+    stopSyncLoading,
+    saveChangesToServer,
+  } = useSync();
   const [importEnvFileContents, setImportEnvFileContents] =
     useState<string>("");
-
-  async function saveChangesToServer() {
-    try {
-      startSyncLoading();
-      await pushChangesToServer();
-      console.log("saved changes to server");
-      stopSyncLoading();
-    } catch (e) {
-      stopSyncLoading();
-    }
-  }
 
   const currentProfile = getCurrentProfile();
   const selectedFolder = currentProfile?.folders.find(
@@ -296,6 +290,7 @@ const SecretsList = () => {
     try {
       handleImportAll(content);
       refreshData();
+      saveChangesToServer();
       toast({
         title: "Import successful",
         description: "Your secrets have been imported.",

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { handleImportProfile as importProfileFromStore } from "../store/secretsStore";
+import { useSync } from "@/hooks/useSync";
 
 interface ProfileSettingsModalProps {
   isOpen: boolean;
@@ -44,6 +45,13 @@ const ProfileSettingsModal = ({
     exportAllProfiles,
     exportCurrentProfile,
   } = useSecretsStore();
+  const {
+    pushChangesToServer,
+    isSyncing,
+    startSyncLoading,
+    stopSyncLoading,
+    saveChangesToServer,
+  } = useSync();
 
   const [newProfileName, setNewProfileName] = useState("");
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
@@ -81,6 +89,7 @@ const ProfileSettingsModal = ({
       title: "Success",
       description: `Profile "${newProfileName}" created successfully`,
     });
+    saveChangesToServer();
   };
 
   const handleDeleteProfile = (profileId: string, profileName: string) => {
@@ -103,6 +112,7 @@ const ProfileSettingsModal = ({
         title: "Success",
         description: `Profile "${profileName}" deleted successfully`,
       });
+      saveChangesToServer();
     }
   };
 
@@ -138,6 +148,7 @@ const ProfileSettingsModal = ({
       title: "Success",
       description: "Profile renamed successfully",
     });
+    saveChangesToServer();
   };
 
   const handleSwitchProfile = (profileId: string) => {
@@ -147,6 +158,8 @@ const ProfileSettingsModal = ({
       title: "Profile Switched",
       description: `Switched to "${profile?.name}"`,
     });
+    saveChangesToServer();
+    onClose();
   };
 
   const startEditing = (profileId: string, currentName: string) => {
@@ -189,6 +202,7 @@ const ProfileSettingsModal = ({
 
     // Reset the input
     event.target.value = "";
+    saveChangesToServer();
   };
 
   return (
@@ -198,6 +212,9 @@ const ProfileSettingsModal = ({
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
             Profile Settings
+            {isSyncing && (
+              <span className="text-sm text-gray-500">Syncing...</span>
+            )}
           </DialogTitle>
         </DialogHeader>
 
@@ -237,6 +254,7 @@ const ProfileSettingsModal = ({
                 onClick={() =>
                   document.getElementById("import-profile")?.click()
                 }
+                disabled={isSyncing}
               >
                 <Upload className="h-4 w-4 mr-2" />
                 Import Profile
@@ -251,12 +269,16 @@ const ProfileSettingsModal = ({
               <Button
                 variant="outline"
                 onClick={() => exportCurrentProfile()}
-                disabled={!currentProfile}
+                disabled={!currentProfile || isSyncing}
               >
                 <Download className="h-4 w-4 mr-2" />
                 Export Current Profile
               </Button>
-              <Button variant="outline" onClick={() => exportAllProfiles()}>
+              <Button
+                variant="outline"
+                onClick={() => exportAllProfiles()}
+                disabled={isSyncing}
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Export All Profiles
               </Button>
@@ -276,7 +298,7 @@ const ProfileSettingsModal = ({
               />
               <Button
                 onClick={handleAddProfile}
-                disabled={!newProfileName.trim()}
+                disabled={!newProfileName.trim() || isSyncing}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Profile
@@ -387,6 +409,7 @@ const ProfileSettingsModal = ({
                               onClick={() =>
                                 handleDeleteProfile(profile.id, profile.name)
                               }
+                              disabled={isSyncing}
                               className="text-red-600 hover:text-red-700"
                             >
                               <Trash2 className="h-4 w-4" />

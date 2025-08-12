@@ -1,6 +1,7 @@
 import { secretsDataSchema } from "@/types";
 
-export const isUsingServer = import.meta.env.USING_SERVER === "true";
+export const isUsingServer = import.meta.env.VITE_USING_SERVER === "true";
+console.log("isUsingServer", isUsingServer);
 
 export async function fetchFromServer() {
   if (!isUsingServer) {
