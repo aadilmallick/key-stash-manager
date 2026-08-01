@@ -319,157 +319,6 @@ const SecretsList = () => {
     return "*".repeat(Math.min(value.length, 20));
   };
 
-  const List = () => {
-    return (
-      <div className="space-y-4 max-h-[60vh] overflow-y-auto pb-8">
-        {filteredSecrets.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            {selectedFolder?.secrets.length === 0 ? (
-              <p>No secrets in this folder. Add your first secret!</p>
-            ) : (
-              <p>No secrets match your search criteria.</p>
-            )}
-          </div>
-        ) : (
-          filteredSecrets.map((secret) => (
-            <div
-              key={secret.id}
-              className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-medium text-gray-900">{secret.name}</h3>
-                    {secret.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                  {secret.description && (
-                    <div className="mb-2">
-                      <p className="text-sm text-gray-700 line-clamp-1 max-w-[60ch] text-ellipsis">
-                        {secret.description}
-                      </p>
-                    </div>
-                  )}
-                  <div className="flex items-center flex-wrap gap-2">
-                    <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono flex-1 min-w-[12rem] text-ellipsis">
-                      {visibleSecrets.has(secret.id)
-                        ? secret.value
-                        : maskValue(secret.value)}
-                    </code>
-                    <div className="flex gap-2">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => toggleSecretVisibility(secret.id)}
-                          >
-                            {visibleSecrets.has(secret.id) ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>
-                            {visibleSecrets.has(secret.id)
-                              ? "Hide secret value"
-                              : "Show secret value"}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              copyToClipboard(secret.value, secret.id)
-                            }
-                          >
-                            {copiedSecrets.has(secret.id) ? (
-                              <Check className="h-4 w-4" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>
-                            {copiedSecrets.has(secret.id)
-                              ? "Copied!"
-                              : "Copy value only"}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              copyEnv(secret.name, secret.value, secret.id)
-                            }
-                          >
-                            {copiedSecrets.has(secret.id) ? (
-                              <Check className="h-4 w-4" color="#36b328" />
-                            ) : (
-                              <Copy className="h-4 w-4" color="#36b328" />
-                            )}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>
-                            {copiedSecrets.has(secret.id)
-                              ? "Copied!"
-                              : "Copy as env variable (NAME=value)"}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-gray-500 mt-2">
-                    Created: {new Date(secret.createdAt).toLocaleDateString()} •
-                    Updated: {new Date(secret.updatedAt).toLocaleDateString()}
-                  </p>
-                </div>
-
-                {/* edit and delete buttons */}
-                <div className="flex gap-2 ml-4 bg-gray-100 rounded-md py-1 px-2 shadow-lg">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setEditingSecret(secret);
-                      setIsModalOpen(true);
-                    }}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteSecret(secret.id)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    );
-  };
-
   return (
     <TooltipProvider>
       <div className="flex-1 p-6">
@@ -597,7 +446,164 @@ const SecretsList = () => {
             </svg>
           </div>
         ) : (
-          <List />
+          <div className="space-y-4 max-h-[60vh] overflow-y-scroll pb-8">
+            {filteredSecrets.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                {selectedFolder?.secrets.length === 0 ? (
+                  <p>No secrets in this folder. Add your first secret!</p>
+                ) : (
+                  <p>No secrets match your search criteria.</p>
+                )}
+              </div>
+            ) : (
+              filteredSecrets.map((secret) => (
+                <div
+                  key={secret.id}
+                  className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-medium text-gray-900">{secret.name}</h3>
+                        {secret.tags.map((tag) => (
+                          <Badge key={tag} variant="secondary" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                      {secret.description && (
+                        <div className="mb-2">
+                          <p className="text-sm text-gray-700 line-clamp-1 max-w-[60ch] text-ellipsis">
+                            {secret.description}
+                          </p>
+                        </div>
+                      )}
+                      <div className="flex items-center flex-wrap gap-2">
+                        <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono flex-1 min-w-[12rem] text-ellipsis">
+                          {visibleSecrets.has(secret.id)
+                            ? secret.value
+                            : maskValue(secret.value)}
+                        </code>
+                        <div className="flex items-center gap-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => toggleSecretVisibility(secret.id)}
+                              >
+                                {visibleSecrets.has(secret.id) ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>
+                                {visibleSecrets.has(secret.id)
+                                  ? "Hide secret value"
+                                  : "Show secret value"}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  copyToClipboard(secret.value, secret.id)
+                                }
+                              >
+                                {copiedSecrets.has(secret.id) ? (
+                                  <Check className="h-4 w-4" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>
+                                {copiedSecrets.has(secret.id)
+                                  ? "Copied!"
+                                  : "Copy value only"}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  copyEnv(secret.name, secret.value, secret.id)
+                                }
+                              >
+                                {copiedSecrets.has(secret.id) ? (
+                                  <Check className="h-4 w-4" color="#36b328" />
+                                ) : (
+                                  <Copy className="h-4 w-4" color="#36b328" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>
+                                {copiedSecrets.has(secret.id)
+                                  ? "Copied!"
+                                  : "Copy as env variable (NAME=value)"}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingSecret(secret);
+                                  setIsModalOpen(true);
+                                }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Edit secret</p>
+                            </TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteSecret(secret.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Delete secret</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-gray-500 mt-2">
+                        Created: {new Date(secret.createdAt).toLocaleDateString()} •
+                        Updated: {new Date(secret.updatedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         )}
 
         {/* for importing all secrets*/}
