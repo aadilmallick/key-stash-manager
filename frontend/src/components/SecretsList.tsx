@@ -563,6 +563,7 @@ const SecretsList = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
+                                aria-label="Edit secret"
                                 onClick={() => {
                                   setEditingSecret(secret);
                                   setIsModalOpen(true);
