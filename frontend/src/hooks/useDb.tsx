@@ -11,6 +11,11 @@ import { getOrCreateVaultKey } from "@/lib/crypto";
 type DbState =
   | { status: "loading" }
   | { status: "error"; error: unknown }
+  | { status: "ready"; collections: Collections; vaultKey: CryptoKey };
+
+type DbContextValue =
+  | { status: "loading" }
+  | { status: "error"; error: unknown }
   | {
       status: "ready";
       collections: Collections;
@@ -19,7 +24,7 @@ type DbState =
       setIsSyncing: (syncing: boolean) => void;
     };
 
-const DbContext = createContext<DbState>({ status: "loading" });
+const DbContext = createContext<DbContextValue>({ status: "loading" });
 
 export function DbProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<DbState>({ status: "loading" });
@@ -36,13 +41,7 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
         ]);
         await seedCollectionsIfNeeded(collections, vaultKey);
         if (!cancelled) {
-          setState({
-            status: "ready",
-            collections,
-            vaultKey,
-            isSyncing: false,
-            setIsSyncing: () => {},
-          });
+          setState({ status: "ready", collections, vaultKey });
         }
       } catch (error) {
         console.error("Failed to initialize vault:", error);
@@ -55,7 +54,7 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const value: DbState =
+  const value: DbContextValue =
     state.status === "ready"
       ? { ...state, isSyncing, setIsSyncing }
       : state;
@@ -63,7 +62,7 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
   return <DbContext.Provider value={value}>{children}</DbContext.Provider>;
 }
 
-export function useDbContext(): DbState {
+export function useDbContext(): DbContextValue {
   return useContext(DbContext);
 }
 

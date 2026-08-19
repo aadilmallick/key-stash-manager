@@ -10,23 +10,24 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
-  Edit,
-  Trash2,
-  Plus,
   Check,
-  X,
-  User,
-  Settings,
   Download,
+  Edit,
+  Plus,
+  Settings,
+  Trash2,
   Upload,
+  User,
+  X,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useConfirm } from "@/hooks/useConfirm";
 import { useSync } from "@/hooks/useSync";
 import { useDbCollections } from "@/hooks/useDb";
 import {
   useCurrentProfile,
   useProfileActions,
-  useProfileStats,
+  useProfileFolderSecretCounts,
   useProfiles,
 } from "@/hooks/useProfiles";
 import {
@@ -43,6 +44,8 @@ interface ProfileSettingsModalProps {
 const ProfileRow = ({
   profile,
   isCurrent,
+  folderCount,
+  secretCount,
   editingProfileId,
   editingProfileName,
   setEditingProfileName,
@@ -56,6 +59,8 @@ const ProfileRow = ({
 }: {
   profile: { id: string; name: string; createdAt: string };
   isCurrent: boolean;
+  folderCount: number;
+  secretCount: number;
   editingProfileId: string | null;
   editingProfileName: string;
   setEditingProfileName: (name: string) => void;
@@ -67,8 +72,6 @@ const ProfileRow = ({
   canDelete: boolean;
   isSyncing: boolean;
 }) => {
-  const { folderCount, secretCount } = useProfileStats(profile.id);
-
   return (
     <div
       className={`p-4 rounded-lg border ${
@@ -77,47 +80,49 @@ const ProfileRow = ({
     >
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          {editingProfileId === profile.id ? (
-            <div className="flex items-center gap-2">
-              <Input
-                value={editingProfileName}
-                onChange={(e) => setEditingProfileName(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter") handleRenameProfile(profile.id);
-                  if (e.key === "Escape") cancelEditing();
-                }}
-                className="max-w-xs"
-                autoFocus
-              />
-              <Button
-                size="sm"
-                onClick={() => handleRenameProfile(profile.id)}
-                disabled={!editingProfileName.trim()}
-              >
-                <Check className="h-4 w-4" />
-              </Button>
-              <Button size="sm" variant="outline" onClick={cancelEditing}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <div>
+          {editingProfileId === profile.id
+            ? (
               <div className="flex items-center gap-2">
-                <h3 className="font-medium">{profile.name}</h3>
-                {isCurrent && (
-                  <Badge variant="default" className="text-xs">
-                    Current
-                  </Badge>
-                )}
+                <Input
+                  value={editingProfileName}
+                  onChange={(e) => setEditingProfileName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleRenameProfile(profile.id);
+                    if (e.key === "Escape") cancelEditing();
+                  }}
+                  className="max-w-xs"
+                  autoFocus
+                />
+                <Button
+                  size="sm"
+                  onClick={() => handleRenameProfile(profile.id)}
+                  disabled={!editingProfileName.trim()}
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button size="sm" variant="outline" onClick={cancelEditing}>
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-              <p className="text-sm text-gray-600">
-                {folderCount} folder(s) • {secretCount} secret(s)
-              </p>
-              <p className="text-xs text-gray-500">
-                Created: {new Date(profile.createdAt).toLocaleDateString()}
-              </p>
-            </div>
-          )}
+            )
+            : (
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-medium">{profile.name}</h3>
+                  {isCurrent && (
+                    <Badge variant="default" className="text-xs">
+                      Current
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600">
+                  {folderCount} folder(s) • {secretCount} secret(s)
+                </p>
+                <p className="text-xs text-gray-500">
+                  Created: {new Date(profile.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+            )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -167,7 +172,10 @@ const ProfileSettingsModal = ({
   const { collections, vaultKey } = useDbCollections();
   const profiles = useProfiles();
   const currentProfile = useCurrentProfile();
-  const { folderCount, secretCount } = useProfileStats(currentProfile?.id);
+  const profileCounts = useProfileFolderSecretCounts();
+  const { folderCount, secretCount } = profileCounts.get(
+    currentProfile?.id ?? "",
+  ) ?? { folderCount: 0, secretCount: 0 };
   const { addProfile, deleteProfile, renameProfile, setCurrentProfile } =
     useProfileActions();
   const {
@@ -179,6 +187,7 @@ const ProfileSettingsModal = ({
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
   const [editingProfileName, setEditingProfileName] = useState("");
   const { toast } = useToast();
+  const confirm = useConfirm();
 
   const handleAddProfile = () => {
     if (!newProfileName.trim()) {
@@ -211,7 +220,7 @@ const ProfileSettingsModal = ({
     saveChangesToServer();
   };
 
-  const handleDeleteProfile = (profileId: string, profileName: string) => {
+  const handleDeleteProfile = async (profileId: string, profileName: string) => {
     if (profiles.length <= 1) {
       toast({
         title: "Error",
@@ -221,11 +230,13 @@ const ProfileSettingsModal = ({
       return;
     }
 
-    if (
-      confirm(
-        `Are you sure you want to delete the profile "${profileName}"? This action cannot be undone.`,
-      )
-    ) {
+    const confirmed = await confirm({
+      title: "Delete profile",
+      description: `Are you sure you want to delete the profile "${profileName}"? This action cannot be undone.`,
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (confirmed) {
       deleteProfile(profileId);
       toast({
         title: "Success",
@@ -361,8 +372,7 @@ const ProfileSettingsModal = ({
               <Button
                 variant="outline"
                 onClick={() =>
-                  document.getElementById("import-profile")?.click()
-                }
+                  document.getElementById("import-profile")?.click()}
                 disabled={isSyncing}
               >
                 <Upload className="h-4 w-4 mr-2" />
@@ -377,10 +387,8 @@ const ProfileSettingsModal = ({
               />
               <Button
                 variant="outline"
-                onClick={() =>
-                  currentProfile &&
-                  exportProfileFile(collections, vaultKey, currentProfile.id)
-                }
+                onClick={() => currentProfile &&
+                  exportProfileFile(collections, vaultKey, currentProfile.id)}
                 disabled={!currentProfile || isSyncing}
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -424,23 +432,31 @@ const ProfileSettingsModal = ({
               All Profiles ({profiles.length})
             </Label>
             <div className="space-y-3">
-              {profiles.map((profile) => (
-                <ProfileRow
-                  key={profile.id}
-                  profile={profile}
-                  isCurrent={profile.id === currentProfile?.id}
-                  editingProfileId={editingProfileId}
-                  editingProfileName={editingProfileName}
-                  setEditingProfileName={setEditingProfileName}
-                  startEditing={startEditing}
-                  cancelEditing={cancelEditing}
-                  handleRenameProfile={handleRenameProfile}
-                  handleSwitchProfile={handleSwitchProfile}
-                  handleDeleteProfile={handleDeleteProfile}
-                  canDelete={profiles.length > 1}
-                  isSyncing={isSyncing}
-                />
-              ))}
+              {profiles.map((profile) => {
+                const counts = profileCounts.get(profile.id) ?? {
+                  folderCount: 0,
+                  secretCount: 0,
+                };
+                return (
+                  <ProfileRow
+                    key={profile.id}
+                    profile={profile}
+                    isCurrent={profile.id === currentProfile?.id}
+                    folderCount={counts.folderCount}
+                    secretCount={counts.secretCount}
+                    editingProfileId={editingProfileId}
+                    editingProfileName={editingProfileName}
+                    setEditingProfileName={setEditingProfileName}
+                    startEditing={startEditing}
+                    cancelEditing={cancelEditing}
+                    handleRenameProfile={handleRenameProfile}
+                    handleSwitchProfile={handleSwitchProfile}
+                    handleDeleteProfile={handleDeleteProfile}
+                    canDelete={profiles.length > 1}
+                    isSyncing={isSyncing}
+                  />
+                );
+              })}
             </div>
           </div>
 

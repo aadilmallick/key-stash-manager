@@ -175,10 +175,10 @@ async function seedCollectionsOnce(
   if (encryptedSecrets.length > 0) collections.secrets.insert(encryptedSecrets);
 
   const firstProfile = profiles[0];
+  const { currentProfileId: requestedProfileId } = data;
   const currentProfileId =
-    (data as SecretsData).currentProfileId &&
-    profiles.some((p) => p.id === (data as SecretsData).currentProfileId)
-      ? (data as SecretsData).currentProfileId
+    requestedProfileId && profiles.some((p) => p.id === requestedProfileId)
+      ? requestedProfileId
       : firstProfile?.id;
 
   if (currentProfileId) {

@@ -17,6 +17,7 @@ export interface DecryptedSecret extends Omit<SecretRow, "value"> {
 export function useDecryptedSecretsForFolder(folderId: string | undefined): {
   secrets: DecryptedSecret[];
   loading: boolean;
+  error: unknown;
 } {
   const { collections, vaultKey } = useDbCollections();
   const { data } = useLiveQuery((q) =>
@@ -29,21 +30,31 @@ export function useDecryptedSecretsForFolder(folderId: string | undefined): {
 
   const [decrypted, setDecrypted] = useState<DecryptedSecret[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setError(null);
     Promise.all(
       rows.map(async (row) => ({
         ...row,
         value: await decryptValue(row.value, vaultKey),
       })),
-    ).then((result) => {
-      if (cancelled) return;
-      result.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-      setDecrypted(result);
-      setLoading(false);
-    });
+    ).then(
+      (result) => {
+        if (cancelled) return;
+        result.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        setDecrypted(result);
+        setLoading(false);
+      },
+      (err) => {
+        if (cancelled) return;
+        console.error("Failed to decrypt secrets for folder:", err);
+        setError(err);
+        setLoading(false);
+      },
+    );
     return () => {
       cancelled = true;
     };
@@ -51,7 +62,7 @@ export function useDecryptedSecretsForFolder(folderId: string | undefined): {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature, vaultKey]);
 
-  return { secrets: decrypted, loading };
+  return { secrets: decrypted, loading, error };
 }
 
 export function useSecretActions() {

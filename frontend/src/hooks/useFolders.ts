@@ -80,7 +80,23 @@ export function useFolderActions() {
       const remaining = (collections.folders.toArray as unknown as FolderRow[]).filter(
         (f) => f.profileId === currentProfileId && f.id !== folderId,
       );
-      setSelectedFolderId(remaining[0]?.id ?? "default");
+      if (remaining.length > 0) {
+        setSelectedFolderId(remaining[0].id);
+      } else {
+        // Deleting the last folder in a profile can't fall back to a
+        // literal "default" - folder ids are UUIDs, so that id would match
+        // no folder and orphan any secret added afterward. Guarantee a
+        // real folder always exists instead, mirroring how a new profile
+        // always starts with one.
+        const replacementId = crypto.randomUUID();
+        collections.folders.insert({
+          id: replacementId,
+          profileId: currentProfileId,
+          name: "Default",
+          order: 0,
+        });
+        setSelectedFolderId(replacementId);
+      }
     }
   };
 

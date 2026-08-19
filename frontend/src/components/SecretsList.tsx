@@ -32,6 +32,7 @@ import { useCurrentProfile } from "@/hooks/useProfiles";
 import { useFoldersForProfile, useSelectedFolderId } from "@/hooks/useFolders";
 import { useDecryptedSecretsForFolder, useSecretActions } from "@/hooks/useSecrets";
 import { useAppState } from "@/hooks/useAppState";
+import { useConfirm } from "@/hooks/useConfirm";
 import { useDbCollections } from "@/hooks/useDb";
 import { exportAllProfilesFile, importAllFromJson } from "@/lib/db/importExport";
 
@@ -41,10 +42,14 @@ const SecretsList = () => {
   const [selectedFolderId] = useSelectedFolderId();
   const folders = useFoldersForProfile(currentProfile?.id);
   const selectedFolder = folders.find((f) => f.id === selectedFolderId);
-  const { secrets: decryptedSecrets, loading: secretsLoading } =
-    useDecryptedSecretsForFolder(selectedFolderId);
+  const {
+    secrets: decryptedSecrets,
+    loading: secretsLoading,
+    error: secretsError,
+  } = useDecryptedSecretsForFolder(selectedFolderId);
   const { addSecret, updateSecret, deleteSecret } = useSecretActions();
   const { searchTerm, setSearchTerm } = useAppState();
+  const confirm = useConfirm();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSecret, setEditingSecret] = useState<Secret | undefined>();
@@ -139,8 +144,14 @@ const SecretsList = () => {
     saveChangesToServer();
   };
 
-  const handleDeleteSecret = (secretId: string) => {
-    if (confirm("Are you sure you want to delete this secret?")) {
+  const handleDeleteSecret = async (secretId: string) => {
+    const confirmed = await confirm({
+      title: "Delete secret",
+      description: "Are you sure you want to delete this secret?",
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (confirmed) {
       deleteSecret(secretId);
       saveChangesToServer();
     }
@@ -364,7 +375,14 @@ const SecretsList = () => {
           </div>
         </div>
 
-        {isSyncing || secretsLoading ? (
+        {secretsError ? (
+          <div className="flex items-center justify-center h-full w-full min-h-[300px] text-center px-4">
+            <p className="text-red-600">
+              Failed to decrypt secrets in this folder. Try switching folders
+              and back, or reload the page.
+            </p>
+          </div>
+        ) : isSyncing || secretsLoading ? (
           <div className="flex items-center justify-center h-full w-full min-h-[300px]">
             <svg
               className="animate-spin h-12 w-12 text-gray-500"
@@ -577,9 +595,22 @@ const SecretsList = () => {
               placeholder="jsonfile.txt"
               multiple={false}
               onChange={async (e) => {
-                const shouldContinue = confirm(
-                  "are you sure you want to import your data? This will overwrite all data for all profiles.",
-                );
+                // Native <dialog> elements render in the browser's top
+                // layer, above any portal-rendered Radix content - close
+                // this one first, or the confirm AlertDialog would be
+                // visually stuck underneath it and unclickable.
+                (
+                  document.getElementById(
+                    "import-modal",
+                  ) as HTMLDialogElement | null
+                )?.close();
+                const shouldContinue = await confirm({
+                  title: "Import and overwrite data",
+                  description:
+                    "Are you sure you want to import your data? This will overwrite all data for all profiles.",
+                  confirmLabel: "Import",
+                  variant: "destructive",
+                });
                 if (!shouldContinue) return;
                 const target = e.target as HTMLInputElement;
                 if (target.files && target.files.length > 0) {
@@ -623,9 +654,21 @@ const SecretsList = () => {
               placeholder="jsonfile.txt"
               multiple={false}
               onChange={async (e) => {
-                const shouldContinue = confirm(
-                  "are you sure you want to import your data? This will overwrite all data.",
-                );
+                // See the import-modal handler above - close the native
+                // top-layer <dialog> first so the confirm AlertDialog isn't
+                // stuck underneath it.
+                (
+                  document.getElementById(
+                    "import-env-modal",
+                  ) as HTMLDialogElement | null
+                )?.close();
+                const shouldContinue = await confirm({
+                  title: "Import .env file",
+                  description:
+                    "Are you sure you want to import your data? This will overwrite any environment variables with the same name.",
+                  confirmLabel: "Import",
+                  variant: "destructive",
+                });
                 if (!shouldContinue) return;
                 const target = e.target as HTMLInputElement;
                 if (target.files && target.files.length > 0) {

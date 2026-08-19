@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useMemo, useState } from "react";
 
 // Ephemeral, non-persisted UI state. Deliberately NOT stored in the `config`
 // collection like currentProfileId/selectedFolderId - a stale search filter
@@ -12,8 +12,9 @@ const AppStateContext = createContext<AppState | null>(null);
 
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [searchTerm, setSearchTerm] = useState("");
+  const value = useMemo(() => ({ searchTerm, setSearchTerm }), [searchTerm]);
   return (
-    <AppStateContext.Provider value={{ searchTerm, setSearchTerm }}>
+    <AppStateContext.Provider value={value}>
       {children}
     </AppStateContext.Provider>
   );

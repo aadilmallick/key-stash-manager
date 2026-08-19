@@ -8,27 +8,23 @@ perform basic CRUD operations on it, as well as dragging it into other folders
 and performing a global search on all secrets across all folders in all
 profiles.
 
-#### To fix
-
-- In MVP1, remove tags, they are noise right now and can be added later.
-
 #### UI bigs and fixes
 
-- Make scrollbars always visible and make them styled nicely
-- Fix secret value overflow issue with max width 20ch and then text overflow
-  ellipsis, see ![image](./images/secret-value-overflow.jpg) for reference
-- Make mobile friendly on screens < 800px, convert sidebar to hamburger menu on
-  mobile screen that overlays when opened, make secret rows narrower by having
-  the action buttons by switching flex display to flex-col display and having
-  the secret action buttons be on the bottom of the secret textbox.
-- Have top-level buttons wrap around well.
+- [ ] Make scrollbars always visible and make them styled nicely
+- [ ] Fix secret value overflow issue with max width 20ch and then text overflow
+      ellipsis, see ![image](./images/secret-value-overflow.jpg) for reference
+- [ ] Make mobile friendly on screens < 800px, convert sidebar to hamburger menu
+      on mobile screen that overlays when opened, make secret rows narrower by
+      having the action buttons by switching flex display to flex-col display
+      and having the secret action buttons be on the bottom of the secret
+      textbox, Have top-level buttons wrap around well.
 
 #### Nonfunctional requirements:
 
 - **UI/UX**: The main focus of this app is UI/UX, so it must be very polished
   and uphold accessibility rules
-- **Client-side encryption at rest**: Prevents reading plaintext data, always
-  encrypted at rest and then decrypted client side
+- [ ] **Client-side encryption at rest**: Prevents reading plaintext data,
+      always encrypted at rest and then decrypted client side
 
 #### High priority functional requirements
 

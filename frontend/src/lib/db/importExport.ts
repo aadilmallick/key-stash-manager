@@ -1,8 +1,8 @@
 import {
-  Profile,
-  SecretsData,
   importSchemaV1,
+  Profile,
   profileZodSchema,
+  SecretsData,
   secretsDataSchema,
 } from "@/types";
 import { decryptValue } from "@/lib/crypto";
@@ -22,8 +22,8 @@ export async function buildNestedSecretsData(
   const secrets = collections.secrets.toArray;
   const currentProfileId =
     collections.config.get(CONFIG_KEYS.CURRENT_PROFILE_ID)?.value ??
-    profiles[0]?.id ??
-    "default";
+      profiles[0]?.id ??
+      "default";
 
   const decryptedSecrets = await Promise.all(
     secrets.map(async (s) => ({
@@ -74,29 +74,38 @@ async function replaceAllData(
   collections: Collections,
   vaultKey: CryptoKey,
 ): Promise<void> {
+  // Encrypt the replacement rows before touching any existing data - if
+  // encryptValue throws partway through, the vault is left untouched
+  // instead of already-deleted with nothing to replace it.
+  const { profiles, folders, secrets } = flattenNestedSecretsData(data);
+  const encryptedSecrets = await encryptSecretRows(secrets, vaultKey);
+
   const existingProfileIds = collections.profiles.toArray.map((p) => p.id);
   const existingFolderIds = collections.folders.toArray.map((f) => f.id);
   const existingSecretIds = collections.secrets.toArray.map((s) => s.id);
 
   if (existingSecretIds.length) collections.secrets.delete(existingSecretIds);
   if (existingFolderIds.length) collections.folders.delete(existingFolderIds);
-  if (existingProfileIds.length) collections.profiles.delete(existingProfileIds);
-
-  const { profiles, folders, secrets } = flattenNestedSecretsData(data);
-  const encryptedSecrets = await encryptSecretRows(secrets, vaultKey);
+  if (existingProfileIds.length) {
+    collections.profiles.delete(existingProfileIds);
+  }
 
   if (profiles.length) collections.profiles.insert(profiles);
   if (folders.length) collections.folders.insert(folders);
   if (encryptedSecrets.length) collections.secrets.insert(encryptedSecrets);
 
   const currentProfileId = data.profiles.some(
-    (p) => p.id === data.currentProfileId,
-  )
+      (p) => p.id === data.currentProfileId,
+    )
     ? data.currentProfileId
     : profiles[0]?.id;
 
   if (currentProfileId) {
-    await upsertConfig(collections, CONFIG_KEYS.CURRENT_PROFILE_ID, currentProfileId);
+    await upsertConfig(
+      collections,
+      CONFIG_KEYS.CURRENT_PROFILE_ID,
+      currentProfileId,
+    );
     const firstFolder = folders.find((f) => f.profileId === currentProfileId);
     await upsertConfig(
       collections,
@@ -160,18 +169,25 @@ export async function importSingleProfile(
     (p) => p.name === parsedProfile.name,
   );
 
-  const profileToInsert: Profile =
-    existingById || existingByName
-      ? {
-          ...parsedProfile,
+  const profileToInsert: Profile = existingById || existingByName
+    ? {
+      ...parsedProfile,
+      id: crypto.randomUUID(),
+      name: existingByName
+        ? `${parsedProfile.name} (Imported ${new Date().toLocaleDateString()})`
+        : parsedProfile.name,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      folders: parsedProfile.folders.map((folder) => ({
+        ...folder,
+        id: crypto.randomUUID(),
+        secrets: folder.secrets.map((secret) => ({
+          ...secret,
           id: crypto.randomUUID(),
-          name: existingByName
-            ? `${parsedProfile.name} (Imported ${new Date().toLocaleDateString()})`
-            : parsedProfile.name,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-      : parsedProfile;
+        })),
+      })),
+    }
+    : parsedProfile;
 
   const { profiles, folders, secrets } = flattenNestedSecretsData({
     profiles: [profileToInsert],
@@ -192,6 +208,7 @@ function downloadJson(filename: string, data: unknown) {
   a.download = filename;
   a.click();
   a.remove();
+  URL.revokeObjectURL(url);
 }
 
 export async function exportAllProfilesFile(
@@ -213,8 +230,9 @@ export async function exportProfileFile(
   const data = await buildNestedSecretsData(collections, vaultKey);
   const profile = data.profiles.find((p) => p.id === profileId);
   if (!profile) throw new Error("Profile not found");
+  const safeName = profile.name.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(0, 64);
   downloadJson(
-    `export-profile-${profile.name}-${profile.id.slice(0, 8)}.json`,
+    `export-profile-${safeName}-${profile.id.slice(0, 8)}.json`,
     profile,
   );
 }

@@ -2,8 +2,6 @@ import { test, expect } from "@playwright/test";
 
 test.describe("secret CRUD", () => {
   test("add, reveal, edit, and delete a secret", async ({ page }) => {
-    page.on("dialog", (dialog) => dialog.accept());
-
     await page.goto("/");
     await expect(page.getByRole("button", { name: "Add Secret" })).toBeVisible({
       timeout: 15000,
@@ -43,6 +41,10 @@ test.describe("secret CRUD", () => {
 
     // delete
     await updatedRow.locator("button:has(svg.lucide-trash2)").click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Delete" })
+      .click();
     await expect(
       page.locator(".rounded-lg.p-4.shadow-sm", { hasText: secretName }),
     ).toHaveCount(0);

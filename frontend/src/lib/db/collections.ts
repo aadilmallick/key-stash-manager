@@ -5,14 +5,15 @@ import {
   openBrowserWASQLiteOPFSDatabase,
   persistedCollectionOptions,
 } from "@tanstack/browser-db-sqlite-persistence";
+import { StandardSchemaV1 } from "@standard-schema/spec";
 import {
   ConfigRow,
-  FolderRow,
-  ProfileRow,
-  SecretRow,
   configRowSchema,
+  FolderRow,
   folderRowSchema,
+  ProfileRow,
   profileRowSchema,
+  SecretRow,
   secretRowSchema,
 } from "./schema";
 
@@ -38,54 +39,26 @@ export interface Collections {
 // back to a precise `Collection<T, string>` - this keeps every other file
 // (hooks, components) working against clean, fully-typed collections, with
 // the type friction isolated to this one file.
-const createCollectionUntyped = createCollection as (options: unknown) => unknown;
+const createCollectionUntyped = createCollection as (
+  options: unknown,
+) => unknown;
 
-function createProfilesCollection(persistence: ReturnType<typeof createBrowserWASQLitePersistence>): Collection<ProfileRow, string> {
+function createPersistedCollection<
+  T extends object,
+  TSchema extends StandardSchemaV1,
+>(
+  persistence: ReturnType<typeof createBrowserWASQLitePersistence>,
+  options: { id: string; getKey: (row: T) => string; schema: TSchema },
+): Collection<T, string> {
   return createCollectionUntyped(
-    persistedCollectionOptions<ProfileRow, string, typeof profileRowSchema>({
-      id: "profiles",
-      getKey: (p) => p.id,
+    persistedCollectionOptions<T, string, TSchema>({
+      id: options.id,
+      getKey: options.getKey,
       persistence,
       schemaVersion: 1,
-      schema: profileRowSchema,
+      schema: options.schema,
     }),
-  ) as Collection<ProfileRow, string>;
-}
-
-function createFoldersCollection(persistence: ReturnType<typeof createBrowserWASQLitePersistence>): Collection<FolderRow, string> {
-  return createCollectionUntyped(
-    persistedCollectionOptions<FolderRow, string, typeof folderRowSchema>({
-      id: "folders",
-      getKey: (f) => f.id,
-      persistence,
-      schemaVersion: 1,
-      schema: folderRowSchema,
-    }),
-  ) as Collection<FolderRow, string>;
-}
-
-function createSecretsCollection(persistence: ReturnType<typeof createBrowserWASQLitePersistence>): Collection<SecretRow, string> {
-  return createCollectionUntyped(
-    persistedCollectionOptions<SecretRow, string, typeof secretRowSchema>({
-      id: "secrets",
-      getKey: (s) => s.id,
-      persistence,
-      schemaVersion: 1,
-      schema: secretRowSchema,
-    }),
-  ) as Collection<SecretRow, string>;
-}
-
-function createConfigCollection(persistence: ReturnType<typeof createBrowserWASQLitePersistence>): Collection<ConfigRow, string> {
-  return createCollectionUntyped(
-    persistedCollectionOptions<ConfigRow, string, typeof configRowSchema>({
-      id: "config",
-      getKey: (c) => c.key,
-      persistence,
-      schemaVersion: 1,
-      schema: configRowSchema,
-    }),
-  ) as Collection<ConfigRow, string>;
+  ) as Collection<T, string>;
 }
 
 let collectionsPromise: Promise<Collections> | null = null;
@@ -110,25 +83,45 @@ async function createCollections(): Promise<Collections> {
   });
 
   const collections: Collections = {
-    profiles: createProfilesCollection(persistence),
-    folders: createFoldersCollection(persistence),
-    secrets: createSecretsCollection(persistence),
-    config: createConfigCollection(persistence),
+    profiles: createPersistedCollection(persistence, {
+      id: "profiles",
+      getKey: (p: ProfileRow) => p.id,
+      schema: profileRowSchema,
+    }),
+    folders: createPersistedCollection(persistence, {
+      id: "folders",
+      getKey: (f: FolderRow) => f.id,
+      schema: folderRowSchema,
+    }),
+    secrets: createPersistedCollection(persistence, {
+      id: "secrets",
+      getKey: (s: SecretRow) => s.id,
+      schema: secretRowSchema,
+    }),
+    config: createPersistedCollection(persistence, {
+      id: "config",
+      getKey: (c: ConfigRow) => c.key,
+      schema: configRowSchema,
+    }),
   };
 
   // Matches the where/join clauses in useFolders.ts/useSecrets.ts - avoids
   // TanStack DB falling back to a full scan on every folder/secret query.
-  collections.folders.createIndex((row) => row.profileId, { indexType: BasicIndex });
-  collections.secrets.createIndex((row) => row.folderId, { indexType: BasicIndex });
+  collections.folders.createIndex((row) => row.profileId, {
+    indexType: BasicIndex,
+  });
+  collections.secrets.createIndex((row) => row.folderId, {
+    indexType: BasicIndex,
+  });
 
   return collections;
 }
 
-export async function upsertConfig(
+export function upsertConfig(
   collections: Collections,
   key: string,
   value: string,
-): Promise<void> {
+): void {
   const existing = collections.config.get(key);
   if (existing) {
     collections.config.update(key, (draft) => {

@@ -64,7 +64,7 @@ frontend/src/lib/crypto.ts   AES-GCM encrypt/decrypt + per-device key management
 frontend/src/hooks/
   useDb.tsx         DbProvider: bootstraps collections+key+seed, exposes {status, collections, vaultKey, isSyncing}
   useConfig.ts      useConfigValue() - reactive KV get/set over the config collection
-  useProfiles.ts    useProfiles/useCurrentProfile/useProfileActions/useProfileStats
+  useProfiles.ts    useProfiles/useCurrentProfile/useProfileActions/useProfileFolderSecretCounts
   useFolders.ts     useFoldersForProfile/useFolderSecretCounts/useFolderActions/useSelectedFolderId
   useSecrets.ts     useDecryptedSecretsForFolder (async decrypt layer)/useSecretActions
   useAppState.tsx   AppStateProvider - ephemeral, non-persisted searchTerm
@@ -98,11 +98,22 @@ folders/secrets) are handled manually in `useProfileActions`/
 ## Encryption
 
 "Basic" client-side encryption at rest, chosen over a master-password vault
-to avoid an unlock-screen UX: a random AES-256-GCM key is generated on
-first run (`crypto.subtle.generateKey`), exported as JWK, and stored in
-`localStorage` under `key-stash-manager-vault-key` — deliberately **not**
-colocated with the SQLite/OPFS file, so copying just the DB doesn't also
-leak the key. No password prompt.
+to avoid an unlock-screen UX: a random, **non-extractable** AES-256-GCM key
+is generated on first run (`crypto.subtle.generateKey(..., false, [...])`)
+and stored as a `CryptoKey` object directly in **IndexedDB**
+(`key-stash-manager-keys` / store `keys`) — deliberately **not** colocated
+with the SQLite/OPFS file, so copying just the DB doesn't also give you the
+key. Non-extractable means the raw key bytes can never be read out (not
+even by this app's own code) — only used via `crypto.subtle`. No password
+prompt.
+
+Users from before this hardening may still have an *extractable* JWK in
+`localStorage` under `key-stash-manager-vault-key` — `getOrCreateVaultKey`
+(`lib/crypto.ts`) migrates that into a non-extractable IndexedDB key on
+first read and deletes the localStorage copy, so already-encrypted data
+stays decryptable. `getOrCreateVaultKey` is wrapped in an in-flight-promise
+guard (same pattern as `seedPromise` below) so concurrent first-run callers
+share one generate/migrate/store operation instead of racing.
 
 Only `secrets.value` is encrypted — names, descriptions, folder/profile
 names stay plaintext (needed for display/search without decrypting
@@ -115,8 +126,11 @@ per-folder-switch loading flicker that a plaintext store didn't have. This
 is an accepted, deliberate tradeoff, not a bug.
 
 **Security model**: protects data at rest (e.g. someone reading the raw
-OPFS file or a backup). Does **not** protect against arbitrary script
-execution in the same browser origin (there's no password gate).
+OPFS file or a backup) and stops the raw key material itself from being
+exfiltrated (non-extractable). Does **not** fully protect against arbitrary
+script execution in the same browser origin — injected same-origin script
+could still call `crypto.subtle.decrypt` using the key, just not read the
+key bytes out (there's no password gate).
 
 ## First-run seeding & migration (`lib/db/migrations.ts`)
 
@@ -157,7 +171,10 @@ E2E-encrypted transport. That's a distinct, separate roadmap item
 
 - `npm test` (Vitest, `frontend/vitest.config.ts`) — unit tests for pure
   logic only: `lib/db/migrations.test.ts` (flatten/legacy-migration),
-  `lib/crypto.test.ts` (encrypt/decrypt round-trip, key persistence).
+  `lib/crypto.test.ts` (encrypt/decrypt round-trip, key persistence,
+  legacy-JWK→IndexedDB migration). jsdom has no built-in IndexedDB, so
+  `vitest.config.ts` loads `fake-indexeddb/auto` via `test.setupFiles` —
+  needed by any test that touches the vault key.
 - `npm run test:e2e` (Playwright, `frontend/playwright.config.ts`) —
   `e2e/secrets-crud.spec.ts`, `e2e/json-import-export.spec.ts`. Runs
   against `npm run dev` with `VITE_USING_SERVER=false` forced in the

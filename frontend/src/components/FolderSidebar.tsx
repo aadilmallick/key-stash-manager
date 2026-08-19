@@ -11,21 +11,29 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import ProfileSettingsModal from "./ProfileSettingsModal";
-import { useCurrentProfile, useProfileStats } from "@/hooks/useProfiles";
+import {
+  useCurrentProfile,
+  useProfileFolderSecretCounts,
+} from "@/hooks/useProfiles";
 import {
   useFolderActions,
   useFolderSecretCounts,
   useFoldersForProfile,
   useSelectedFolderId,
 } from "@/hooks/useFolders";
+import { useConfirm } from "@/hooks/useConfirm";
 
 const FolderSidebar = () => {
   const currentProfile = useCurrentProfile();
   const folders = useFoldersForProfile(currentProfile?.id);
   const folderSecretCounts = useFolderSecretCounts(currentProfile?.id);
-  const { folderCount, secretCount } = useProfileStats(currentProfile?.id);
+  const profileCounts = useProfileFolderSecretCounts();
+  const { folderCount, secretCount } = profileCounts.get(
+    currentProfile?.id ?? "",
+  ) ?? { folderCount: 0, secretCount: 0 };
   const [selectedFolderId, setSelectedFolderId] = useSelectedFolderId();
   const { addFolder, deleteFolder, renameFolder } = useFolderActions();
+  const confirm = useConfirm();
 
   const [isAddingFolder, setIsAddingFolder] = useState(false);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
@@ -186,9 +194,16 @@ const FolderSidebar = () => {
                   variant="ghost"
                   size="sm"
                   className="h-6 w-6 p-0 text-red-600"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    if (confirm("Delete this folder and all its secrets?")) {
+                    const confirmed = await confirm({
+                      title: "Delete folder",
+                      description:
+                        "Delete this folder and all its secrets? This action cannot be undone.",
+                      confirmLabel: "Delete",
+                      variant: "destructive",
+                    });
+                    if (confirmed) {
                       deleteFolder(folder.id);
                     }
                   }}

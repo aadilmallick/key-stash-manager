@@ -4,8 +4,6 @@ import os from "os";
 
 test.describe("JSON export/import round trip", () => {
   test("exporting then re-importing preserves a secret", async ({ page }) => {
-    page.on("dialog", (dialog) => dialog.accept());
-
     await page.goto("/");
     await expect(page.getByRole("button", { name: "Add Secret" })).toBeVisible({
       timeout: 15000,
@@ -34,6 +32,10 @@ test.describe("JSON export/import round trip", () => {
     // Delete the marker secret so re-import is the only way it comes back.
     const row = page.locator(".rounded-lg.p-4.shadow-sm", { hasText: secretName });
     await row.locator("button:has(svg.lucide-trash2)").click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Delete" })
+      .click();
     await expect(row).toHaveCount(0);
 
     // Re-import the exported file (full overwrite import).
@@ -41,6 +43,10 @@ test.describe("JSON export/import round trip", () => {
     const importDialog = page.locator("#import-modal");
     await expect(importDialog).toBeVisible();
     await importDialog.locator('input[type="file"]').setInputFiles(exportPath);
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Import" })
+      .click();
 
     // The secret should be back after the overwrite-import completes.
     await expect(
