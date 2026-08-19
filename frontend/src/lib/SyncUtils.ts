@@ -1,5 +1,8 @@
 import { secretsDataSchema } from "@/types";
 
+// /api/sync always exchanges plaintext values in the nested wire format -
+// the server never sees ciphertext. Encryption-at-rest applies only to the
+// local wa-sqlite persistence layer (see src/lib/db/importExport.ts).
 export const isUsingServer = import.meta.env.VITE_USING_SERVER === "true";
 console.log("isUsingServer", isUsingServer);
 

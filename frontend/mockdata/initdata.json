@@ -1,0 +1,405 @@
+{
+    "profiles": [
+        {
+            "id": "default",
+            "name": "Default",
+            "folders": [
+                {
+                    "id": "default",
+                    "name": "default",
+                    "secrets": [
+                        {
+                            "id": "41bcb93b-c86e-42d8-aac7-c61f826f6cd0",
+                            "name": "PAGESPEED_INSIGHTS_API_KEY",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "createdAt": "2025-06-27T01:10:38.362Z",
+                            "updatedAt": "2025-06-27T01:10:45.706Z"
+                        },
+                        {
+                            "id": "92c80194-6ada-47f8-977a-dfb228fadb10",
+                            "name": "FIRECRAWL_API_KEY",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-07-06T13:26:47.674Z",
+                            "updatedAt": "2025-07-06T13:26:47.674Z"
+                        },
+                        {
+                            "id": "081e67a0-1644-4ab0-9557-402e47b260cb",
+                            "name": "ARCJET_KEY",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "for rate limiting",
+                            "createdAt": "2025-07-14T21:47:03.513Z",
+                            "updatedAt": "2025-07-14T21:47:03.513Z"
+                        }
+                    ]
+                },
+                {
+                    "id": "dd209c9c-0dbf-4346-81c0-0494a8dc1278",
+                    "name": "ai",
+                    "secrets": [
+                        {
+                            "id": "cf3e82fe-b957-43b2-bd3b-f8280bd0711b",
+                            "name": "GOOGLE_GENERATIVE_API_KEY",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "createdAt": "2025-06-26T12:32:08.970Z",
+                            "updatedAt": "2025-06-27T22:07:14.679Z"
+                        },
+                        {
+                            "id": "4b42567d-dc11-42c8-ba92-3b2f88730f11",
+                            "name": "UPSTASH_VECTOR_STORE",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "createdAt": "2025-06-27T22:07:52.750Z",
+                            "updatedAt": "2025-06-27T22:07:52.750Z"
+                        },
+                        {
+                            "id": "0d878640-c8d2-4753-b3d5-4876cabb0463",
+                            "name": "OPENAI_API_KEY",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "createdAt": "2025-06-29T14:10:41.151Z",
+                            "updatedAt": "2025-06-29T14:10:41.151Z"
+                        },
+                        {
+                            "id": "43543e5d-c5ae-42e1-829d-fd0a66a810ca",
+                            "name": "KIE_AI_API_KEY",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "createdAt": "2025-07-03T22:25:43.951Z",
+                            "updatedAt": "2025-07-03T22:25:43.951Z"
+                        },
+                        {
+                            "id": "d5b29232-05f9-4470-83fe-b238f5813e5d",
+                            "name": "RUNWARE_API_KEY",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "createdAt": "2025-07-03T22:28:13.918Z",
+                            "updatedAt": "2025-07-03T22:28:13.918Z"
+                        },
+                        {
+                            "id": "7099c1e0-02bc-4bf5-aad0-6a76f08b151e",
+                            "name": "MODELS_LAB_API_KEY",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "Go here: https://docs.modelslab.com/image-generation/realtime-stable-diffusion/text2img and https://modelslab.com/dashboard to get the API keys and learn how to use the api",
+                            "createdAt": "2025-07-04T14:31:10.644Z",
+                            "updatedAt": "2025-07-04T14:44:06.928Z"
+                        },
+                        {
+                            "id": "9d9c92f5-c171-4fe8-919d-790dbe5170bb",
+                            "name": "GOOGLE_GENERATIVE_API_KEY_MALLICKSVA",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "the mallicksva API key",
+                            "createdAt": "2025-07-22T14:04:19.333Z",
+                            "updatedAt": "2025-07-22T14:04:33.883Z"
+                        }
+                    ]
+                },
+                {
+                    "id": "1d9ab2c5-f18e-494a-8965-ec0da41dbbde",
+                    "name": "github",
+                    "secrets": [
+                        {
+                            "id": "1398ace5-25a8-4079-8286-a394f682378d",
+                            "name": "GITHUB_GISTS_PAT",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "The personal access token with read/write access to repositories.",
+                            "createdAt": "2025-07-06T13:21:39.899Z",
+                            "updatedAt": "2025-07-06T13:22:19.029Z"
+                        },
+                        {
+                            "id": "d0483819-8f6d-4c77-a3cb-d0ff1f60f3fc",
+                            "name": "GITHUB_OAUTH_CLIENT_ID",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "the client id for github OAuth",
+                            "createdAt": "2025-07-12T14:44:46.344Z",
+                            "updatedAt": "2025-07-12T14:44:46.344Z"
+                        },
+                        {
+                            "id": "9992cfde-4c44-4132-bf36-fb1507be7454",
+                            "name": "GITHUB_OAUTH_CLIENT_SECRET",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "the client secret for a github oauth app",
+                            "createdAt": "2025-07-12T14:45:28.450Z",
+                            "updatedAt": "2025-07-12T14:45:28.450Z"
+                        }
+                    ]
+                },
+                {
+                    "id": "5834be76-118b-4507-8cb2-9dbc14d858d5",
+                    "name": "google",
+                    "secrets": [
+                        {
+                            "id": "bea090a6-34fe-464f-af4a-8b0a19ba4e12",
+                            "name": "GOOGLE_OAUTH_CLIENT_ID",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "the client ID for signing into google oauth, go here:  https://console.cloud.google.com/auth/clients?inv=1&invt=Ab2kVw&project=aadilmallickprojects",
+                            "createdAt": "2025-07-12T15:54:39.291Z",
+                            "updatedAt": "2025-07-12T15:55:59.192Z"
+                        },
+                        {
+                            "id": "d9236438-80a8-4f87-ab80-fe8fc31e956f",
+                            "name": "GOOGLE_OAUTH_CLIENT_SECRET",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "the client secret for google oauth, GO here: https://console.cloud.google.com/auth/clients?project=aadilmallickprojects",
+                            "createdAt": "2025-07-12T15:54:56.511Z",
+                            "updatedAt": "2025-07-19T00:26:58.936Z"
+                        },
+                        {
+                            "id": "1813462d-e633-46c5-a5a0-be0cca6b7db4",
+                            "name": "APP_PASSWORD",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "This is the app password for google application \"dev\"",
+                            "createdAt": "2025-07-13T20:24:21.600Z",
+                            "updatedAt": "2025-07-13T20:24:21.600Z"
+                        }
+                    ]
+                },
+                {
+                    "id": "62cdf3c5-caa4-4c96-a7ae-11cdd8bea603",
+                    "name": "cloudnotes",
+                    "secrets": [
+                        {
+                            "id": "883b8fae-9a8c-4146-8655-23642634ea44",
+                            "name": "TURSO_DATABASE_URL",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "for cloudnotes, database url",
+                            "createdAt": "2025-07-12T16:11:21.880Z",
+                            "updatedAt": "2025-07-12T16:11:35.300Z"
+                        },
+                        {
+                            "id": "6842ec32-2474-4147-9348-69cdbfb72963",
+                            "name": "TURSO_CLOUDNOTES_TOKEN",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "for cloudnotes, database token",
+                            "createdAt": "2025-07-12T16:11:21.881Z",
+                            "updatedAt": "2025-07-12T16:11:44.824Z"
+                        },
+                        {
+                            "id": "93728f33-6e3d-44b7-b011-22ca3becf5c9",
+                            "name": "CLOUDNOTES_PROD_GITHUB_CLIENT_SECRET",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "the production client secret version of github oauth for cloud secrets.",
+                            "createdAt": "2025-07-12T16:56:25.833Z",
+                            "updatedAt": "2025-07-12T16:56:25.833Z"
+                        },
+                        {
+                            "id": "15de6594-4ea0-4a29-b987-4d2e677fc71b",
+                            "name": "CLOUDNOTES_PROD_GITHUB_CLIENT_ID",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "the production client id version of the github oauth cient id",
+                            "createdAt": "2025-07-12T16:59:28.971Z",
+                            "updatedAt": "2025-07-12T16:59:28.971Z"
+                        },
+                        {
+                            "id": "cd1dd712-1699-45cf-8a81-4be172f4cd6a",
+                            "name": "POLAR_CLOUDNOTES_ACCESS_TOKEN",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "the polar.sh access token for the cloudnotes proj",
+                            "createdAt": "2025-07-18T16:08:57.937Z",
+                            "updatedAt": "2025-07-18T16:08:57.937Z"
+                        }
+                    ]
+                },
+                {
+                    "id": "142dd4ba-2957-48b0-9e4d-a9e010c5c167",
+                    "name": "life_as_videogame",
+                    "secrets": [
+                        {
+                            "id": "aba322b2-f05f-4505-a7ca-6875e06f4cff",
+                            "name": "SUPABASE_DATABASE_PASSWORD",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-07-18T19:21:22.010Z",
+                            "updatedAt": "2025-07-18T19:21:22.010Z"
+                        },
+                        {
+                            "id": "2b9a5c5c-3f9c-485d-bd0d-bd1806a2e1f7",
+                            "name": "GOOGLE_OAUTH_CLIENT_ID",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-07-18T19:37:36.043Z",
+                            "updatedAt": "2025-07-21T16:59:27.483Z"
+                        },
+                        {
+                            "id": "e3208e43-8fe7-45f8-94db-93767005d8ad",
+                            "name": "GOOGLE_OAUTH_CLIENT_SECRET",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-07-18T19:38:00.528Z",
+                            "updatedAt": "2025-07-21T16:59:54.571Z"
+                        }
+                    ]
+                },
+                {
+                    "id": "5cf6ee3c-e08d-4c2b-9ffb-584ced8608b6",
+                    "name": "stripe",
+                    "secrets": [
+                        {
+                            "id": "aa7f626f-de47-4e40-8fd2-afa8c2f8463c",
+                            "name": "STRIPE_TEST_PUBLIC_KEY",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-08-12T14:09:44.827Z",
+                            "updatedAt": "2025-08-12T14:09:44.827Z"
+                        }
+                    ]
+                }
+            ],
+            "createdAt": "2025-07-23T19:18:55.035Z",
+            "updatedAt": "2025-08-12T14:09:44.827Z"
+        },
+        {
+            "id": "e5b0f461-92b9-4b19-a4f3-4a8d3a4e90fd",
+            "name": "symmtech",
+            "folders": [
+                {
+                    "id": "9b70e1c3-5e8d-4910-8a19-7ceaf42e0bc3",
+                    "name": "default",
+                    "secrets": [
+                        {
+                            "id": "9153038d-b4ec-49e7-a81e-7ed39e7b4f99",
+                            "name": "STRIPE_MONTHLY_PRICE_ID",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-07-23T19:25:21.337Z",
+                            "updatedAt": "2025-07-23T19:25:21.337Z"
+                        },
+                        {
+                            "id": "8221723e-99d3-4932-bc27-22ed4556f661",
+                            "name": "STRIPE_QUARTERLY_PRICE_ID",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-07-23T19:25:21.338Z",
+                            "updatedAt": "2025-07-23T19:25:21.338Z"
+                        },
+                        {
+                            "id": "a7479294-3a0a-408e-86e0-e36d1039e1b7",
+                            "name": "STRIPE_YEARLY_PRICE_ID",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-07-23T19:25:21.338Z",
+                            "updatedAt": "2025-07-23T19:25:21.338Z"
+                        },
+                        {
+                            "id": "ec87ac63-78a8-4889-b1e0-020f15af62c0",
+                            "name": "STRIPE_WEBHOOK_SECRET",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-07-23T19:25:21.338Z",
+                            "updatedAt": "2025-07-23T19:25:21.338Z"
+                        },
+                        {
+                            "id": "03beb829-2406-4a81-9dcf-6ed89c443602",
+                            "name": "STRIPE_SECRET_KEY",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-07-23T19:25:21.338Z",
+                            "updatedAt": "2025-07-23T19:25:21.338Z"
+                        },
+                        {
+                            "id": "ea28e8fd-c108-4167-afca-2dd1ce3db76c",
+                            "name": "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-07-23T19:25:21.338Z",
+                            "updatedAt": "2025-07-23T19:25:21.338Z"
+                        },
+                        {
+                            "id": "0c5b3861-a9e5-4c34-bdcc-49b58a63f1dc",
+                            "name": "BLOB_READ_WRITE_TOKEN",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-07-23T19:25:21.338Z",
+                            "updatedAt": "2025-07-23T19:25:21.338Z"
+                        },
+                        {
+                            "id": "a7409d39-5b4b-493c-8ab8-14b11dfabc65",
+                            "name": "DATABASE_URL",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-07-23T19:25:21.338Z",
+                            "updatedAt": "2025-07-23T19:25:21.338Z"
+                        },
+                        {
+                            "id": "889d5150-8c52-4b61-b183-f61580e84752",
+                            "name": "SECRET_FORTEAI_API_KEY",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-07-23T19:25:21.338Z",
+                            "updatedAt": "2025-07-23T19:25:21.338Z"
+                        },
+                        {
+                            "id": "1f4bc6d9-6781-4cc3-acf3-638797eafcd3",
+                            "name": "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-07-23T19:25:21.338Z",
+                            "updatedAt": "2025-07-23T19:25:21.338Z"
+                        },
+                        {
+                            "id": "ad447def-be30-4d99-a3c0-242f7372f07c",
+                            "name": "CLERK_SECRET_KEY",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-07-23T19:25:21.338Z",
+                            "updatedAt": "2025-07-23T19:25:21.338Z"
+                        },
+                        {
+                            "id": "142671aa-9659-4bb6-b819-f32e0f55e8c6",
+                            "name": "STRIPE_SUBSCRIPTION_PRODUCT_ID",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-07-23T19:25:21.338Z",
+                            "updatedAt": "2025-07-23T19:25:21.338Z"
+                        },
+                        {
+                            "id": "db2916fc-08eb-4c06-83a2-d41d72617944",
+                            "name": "REDIS_URL",
+                            "value": "0x0000000000000000000000000000000000000000",
+                            "tags": [],
+                            "description": "",
+                            "createdAt": "2025-07-23T19:25:21.338Z",
+                            "updatedAt": "2025-07-23T19:25:21.338Z"
+                        }
+                    ]
+                }
+            ],
+            "createdAt": "2025-07-23T19:25:11.752Z",
+            "updatedAt": "2025-07-23T19:25:21.338Z"
+        }
+    ],
+    "currentProfileId": "e5b0f461-92b9-4b19-a4f3-4a8d3a4e90fd"
+}

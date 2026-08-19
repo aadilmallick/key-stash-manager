@@ -1,25 +1,25 @@
-import { STORAGE_KEY, useSecretsStore } from "@/store/secretsStore";
 import { fetchFromServer, isUsingServer } from "@/lib/SyncUtils";
-import { SecretsData } from "@/types";
-import React, { useState } from "react";
+import { buildNestedSecretsData, importAllFromJson } from "@/lib/db/importExport";
+import { useDbContext } from "./useDb";
 
+// Sync stays plaintext at the transport boundary: /api/sync exchanges the
+// nested wire format (see buildNestedSecretsData/importAllFromJson) with
+// decrypted values. Encryption-at-rest only applies to the local wa-sqlite
+// file, not the sync payload - matches current/pre-migration behavior.
 export const useSync = () => {
-  const [isSyncing, setIsSyncing] = useState(false);
-  const { setData, loadData } = useSecretsStore();
+  const dbState = useDbContext();
+
   async function pushChangesToServer() {
-    // opt out of sync if not using server
     if (!isUsingServer) {
       console.log("client side app only. Will not attempt to sync with server");
       return false;
     }
+    if (dbState.status !== "ready") return false;
 
-    if (!localStorage.getItem(STORAGE_KEY)) {
-      console.error("No secrets found");
-      return;
-    }
+    const data = await buildNestedSecretsData(dbState.collections, dbState.vaultKey);
     const response = await fetch("/api/sync", {
       method: "POST",
-      body: localStorage.getItem(STORAGE_KEY),
+      body: JSON.stringify(data),
       headers: {
         "Content-Type": "application/json",
       },
@@ -32,45 +32,45 @@ export const useSync = () => {
   }
 
   async function pullChangesFromServer() {
-    // If not using server, always load from localStorage
-    if (!isUsingServer) {
-      loadData();
-      return false;
-    }
-    startSyncLoading();
+    if (!isUsingServer) return false;
+    if (dbState.status !== "ready") return false;
+
+    dbState.setIsSyncing(true);
     try {
       const data = await fetchFromServer();
       if (data) {
-        setData(data as SecretsData);
-      } else {
-        // Fallback to local storage if server returns nothing
-        loadData();
+        await importAllFromJson(
+          JSON.stringify(data),
+          dbState.collections,
+          dbState.vaultKey,
+        );
       }
     } catch (e) {
-      loadData();
       console.error("Failed to pull changes from server", e);
     } finally {
-      stopSyncLoading();
+      dbState.setIsSyncing(false);
     }
   }
 
   async function saveChangesToServer() {
+    if (dbState.status !== "ready") return;
     try {
-      startSyncLoading();
+      dbState.setIsSyncing(true);
       await pushChangesToServer();
       console.log("saved changes to server");
-      stopSyncLoading();
-    } catch (e) {
-      stopSyncLoading();
+    } finally {
+      dbState.setIsSyncing(false);
     }
   }
 
+  const isSyncing = dbState.status === "ready" ? dbState.isSyncing : false;
   const startSyncLoading = () => {
-    setIsSyncing(true);
+    if (dbState.status === "ready") dbState.setIsSyncing(true);
   };
   const stopSyncLoading = () => {
-    setIsSyncing(false);
+    if (dbState.status === "ready") dbState.setIsSyncing(false);
   };
+
   return {
     pushChangesToServer,
     isSyncing,

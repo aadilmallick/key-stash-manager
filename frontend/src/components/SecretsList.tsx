@@ -1,16 +1,7 @@
 import React, { useState } from "react";
-import {
-  getLocalStorage,
-  STORAGE_KEY,
-  handleImportAll,
-  exportProfile,
-  handleImportProfile,
-  useSecretsStore,
-} from "../store/secretsStore";
 import { Secret } from "../types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
@@ -26,7 +17,6 @@ import {
   Search,
   Copy,
   Check,
-  Loader2,
   Import,
   LucideXCircle,
   LucideDownload,
@@ -36,30 +26,25 @@ import SecretModal from "./SecretModal";
 import { useToast } from "@/components/ui/use-toast";
 import { useSync } from "@/hooks/useSync";
 import { HideDialogButton, ToggleDialogButton } from "./custom/PopoverButtons";
-import { Dialog, DialogContent, DialogTitle } from "@radix-ui/react-dialog";
-import { DialogHeader } from "./ui/dialog";
-import { Label } from "recharts";
+import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
+import { useCurrentProfile } from "@/hooks/useProfiles";
+import { useFoldersForProfile, useSelectedFolderId } from "@/hooks/useFolders";
+import { useDecryptedSecretsForFolder, useSecretActions } from "@/hooks/useSecrets";
+import { useAppState } from "@/hooks/useAppState";
+import { useDbCollections } from "@/hooks/useDb";
+import { exportAllProfilesFile, importAllFromJson } from "@/lib/db/importExport";
 
 const SecretsList = () => {
-  const {
-    data,
-    selectedFolderId,
-    searchTerm,
-    selectedTags,
-    setSearchTerm,
-    setSelectedTags,
-    addSecret,
-    updateSecret,
-    deleteSecret,
-    getFilteredSecrets,
-    getAllTags,
-    loadData,
-    getCurrentProfile,
-    refreshData,
-    exportAllProfiles,
-    exportCurrentProfile,
-  } = useSecretsStore();
+  const { collections, vaultKey } = useDbCollections();
+  const currentProfile = useCurrentProfile();
+  const [selectedFolderId] = useSelectedFolderId();
+  const folders = useFoldersForProfile(currentProfile?.id);
+  const selectedFolder = folders.find((f) => f.id === selectedFolderId);
+  const { secrets: decryptedSecrets, loading: secretsLoading } =
+    useDecryptedSecretsForFolder(selectedFolderId);
+  const { addSecret, updateSecret, deleteSecret } = useSecretActions();
+  const { searchTerm, setSearchTerm } = useAppState();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSecret, setEditingSecret] = useState<Secret | undefined>();
@@ -67,7 +52,6 @@ const SecretsList = () => {
   const [copiedSecrets, setCopiedSecrets] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const {
-    pushChangesToServer,
     isSyncing,
     startSyncLoading,
     stopSyncLoading,
@@ -76,12 +60,15 @@ const SecretsList = () => {
   const [importEnvFileContents, setImportEnvFileContents] =
     useState<string>("");
 
-  const currentProfile = getCurrentProfile();
-  const selectedFolder = currentProfile?.folders.find(
-    (f) => f.id === selectedFolderId
-  );
-  const filteredSecrets = getFilteredSecrets();
-  const allTags = getAllTags();
+  const filteredSecrets = decryptedSecrets.filter((secret) => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      secret.name.toLowerCase().includes(term) ||
+      secret.value.toLowerCase().includes(term) ||
+      (secret.description && secret.description.toLowerCase().includes(term))
+    );
+  });
 
   const toggleSecretVisibility = (secretId: string) => {
     setVisibleSecrets((prev) => {
@@ -123,9 +110,9 @@ const SecretsList = () => {
     }
   };
 
-  function onExport() {
+  async function onExport() {
     try {
-      exportAllProfiles();
+      await exportAllProfilesFile(collections, vaultKey);
       toast({
         title: "Export succeeded",
         description: "All profiles exported successfully!",
@@ -140,13 +127,13 @@ const SecretsList = () => {
     }
   }
 
-  const handleSaveSecret = (
-    secretData: Omit<Secret, "id" | "createdAt" | "updatedAt">
+  const handleSaveSecret = async (
+    secretData: Omit<Secret, "id" | "createdAt" | "updatedAt">,
   ) => {
     if (editingSecret) {
-      updateSecret(selectedFolderId, editingSecret.id, secretData);
+      await updateSecret(editingSecret.id, secretData);
     } else {
-      addSecret(selectedFolderId, secretData);
+      await addSecret(selectedFolderId, secretData);
     }
     setEditingSecret(undefined);
     saveChangesToServer();
@@ -154,7 +141,7 @@ const SecretsList = () => {
 
   const handleDeleteSecret = (secretId: string) => {
     if (confirm("Are you sure you want to delete this secret?")) {
-      deleteSecret(selectedFolderId, secretId);
+      deleteSecret(secretId);
       saveChangesToServer();
     }
   };
@@ -170,8 +157,8 @@ const SecretsList = () => {
     }
 
     try {
-      const strings = selectedFolder.secrets.map(
-        (secret) => `${secret.name}=${secret.value}`
+      const strings = decryptedSecrets.map(
+        (secret) => `${secret.name}=${secret.value}`,
       );
       const envContents = strings.join("\n");
       await navigator.clipboard.writeText(envContents);
@@ -206,10 +193,9 @@ const SecretsList = () => {
     }
   }
 
-  function importEnvFile() {
-    console.log("importEnvFile", importEnvFileContents);
+  async function importEnvFile() {
     const modal = document.getElementById(
-      "import-env-modal"
+      "import-env-modal",
     ) as HTMLDialogElement;
     // 1. close the modal
     if (modal) {
@@ -227,7 +213,7 @@ const SecretsList = () => {
 
     // 3. parse the content
     const lines = importEnvFileContents.split("\n");
-    const secrets: Array<{ name: string; value: string }> = [];
+    const parsedSecrets: Array<{ name: string; value: string }> = [];
 
     for (const line of lines) {
       const trimmedLine = line.trim();
@@ -236,14 +222,14 @@ const SecretsList = () => {
       const match = trimmedLine.match(/^([^=]+)=(.*)$/);
       if (match) {
         const [, name, value] = match;
-        secrets.push({
+        parsedSecrets.push({
           name: name.trim(),
           value: value.trim(),
         });
       }
     }
 
-    if (secrets.length === 0) {
+    if (parsedSecrets.length === 0) {
       toast({
         title: "Import failed",
         description: "No valid environment variables found",
@@ -252,21 +238,13 @@ const SecretsList = () => {
       return;
     }
 
-    // Add secrets to store
-    const existingSecrets = selectedFolder?.secrets || [];
     startSyncLoading();
-    for (const secret of secrets) {
-      const existing = existingSecrets.find((s) => s.name === secret.name);
+    for (const secret of parsedSecrets) {
+      const existing = decryptedSecrets.find((s) => s.name === secret.name);
       if (existing) {
-        updateSecret(selectedFolderId, existing.id, {
-          ...secret,
-          tags: existing.tags, // Preserve existing tags
-        });
+        await updateSecret(existing.id, { value: secret.value });
       } else {
-        addSecret(selectedFolderId, {
-          ...secret,
-          tags: [],
-        });
+        await addSecret(selectedFolderId, { ...secret, description: "" });
       }
     }
     stopSyncLoading();
@@ -275,7 +253,7 @@ const SecretsList = () => {
 
     toast({
       title: "Import successful",
-      description: `Imported ${secrets.length} environment variables`,
+      description: `Imported ${parsedSecrets.length} environment variables`,
       variant: "default",
     });
 
@@ -288,8 +266,7 @@ const SecretsList = () => {
 
     startSyncLoading();
     try {
-      handleImportAll(content);
-      refreshData();
+      await importAllFromJson(content, collections, vaultKey);
       saveChangesToServer();
       toast({
         title: "Import successful",
@@ -306,14 +283,6 @@ const SecretsList = () => {
       stopSyncLoading();
     }
   }
-
-  const toggleTagFilter = (tag: string) => {
-    setSelectedTags(
-      selectedTags.includes(tag)
-        ? selectedTags.filter((t) => t !== tag)
-        : [...selectedTags, tag]
-    );
-  };
 
   const maskValue = (value: string) => {
     return "*".repeat(Math.min(value.length, 20));
@@ -362,15 +331,6 @@ const SecretsList = () => {
                 <LucideDownload className="h-4 w-4 mr-2" />
                 Export All Profiles
               </Button>
-              {/* <Button
-                variant="ghost"
-                disabled={isSyncing}
-                className="border-2 border-gray-900 cursor-pointer hover:bg-gray-900 hover:text-white transition-colors bg-green-200 text-black"
-                onClick={() => exportCurrentProfile()}
-              >
-                <LucideDownload className="h-4 w-4 mr-2" />
-                Export Current Profile
-              </Button> */}
               <Button
                 variant="ghost"
                 disabled={isSyncing}
@@ -402,27 +362,9 @@ const SecretsList = () => {
               />
             </div>
           </div>
-
-          {allTags.length > 0 && (
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">Filter by tags:</p>
-              <div className="flex flex-wrap gap-2">
-                {allTags.map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant={selectedTags.includes(tag) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => toggleTagFilter(tag)}
-                  >
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
-        {isSyncing ? (
+        {isSyncing || secretsLoading ? (
           <div className="flex items-center justify-center h-full w-full min-h-[300px]">
             <svg
               className="animate-spin h-12 w-12 text-gray-500"
@@ -449,7 +391,7 @@ const SecretsList = () => {
           <div className="space-y-4 max-h-[60vh] overflow-y-scroll pb-8">
             {filteredSecrets.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
-                {selectedFolder?.secrets.length === 0 ? (
+                {decryptedSecrets.length === 0 ? (
                   <p>No secrets in this folder. Add your first secret!</p>
                 ) : (
                   <p>No secrets match your search criteria.</p>
@@ -465,11 +407,6 @@ const SecretsList = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="font-medium text-gray-900">{secret.name}</h3>
-                        {secret.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
                       </div>
                       {secret.description && (
                         <div className="mb-2">
@@ -623,8 +560,8 @@ const SecretsList = () => {
             <LucideXCircle color="red" className="w-8 h-8" />
           </HideDialogButton>
           <p className="text-sm text-muted-foreground">
-            You can override all current secrets, folders, and tags by importing
-            a JSON file (one that's exported from this website). Drag a file
+            You can override all current secrets and folders by importing a
+            JSON file (one that's exported from this website). Drag a file
             into the file selector to get started.
           </p>
           <p className="text-red-400 text-sm mb-4">
@@ -641,7 +578,7 @@ const SecretsList = () => {
               multiple={false}
               onChange={async (e) => {
                 const shouldContinue = confirm(
-                  "are you sure you want to import your data? This will overwrite all data for all profiles."
+                  "are you sure you want to import your data? This will overwrite all data for all profiles.",
                 );
                 if (!shouldContinue) return;
                 const target = e.target as HTMLInputElement;
@@ -687,7 +624,7 @@ const SecretsList = () => {
               multiple={false}
               onChange={async (e) => {
                 const shouldContinue = confirm(
-                  "are you sure you want to import your data? This will overwrite all data."
+                  "are you sure you want to import your data? This will overwrite all data.",
                 );
                 if (!shouldContinue) return;
                 const target = e.target as HTMLInputElement;

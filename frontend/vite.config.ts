@@ -53,4 +53,15 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    // These construct Web Workers internally via `new URL(..., import.meta.url)`.
+    // Vite's dev-mode dependency pre-bundler flattens/hashes packages into
+    // node_modules/.vite/deps, which breaks that relative worker URL (it
+    // resolves to index.html instead of the worker script, since the
+    // pre-bundled path is a virtual asset Vite's dev server doesn't serve as
+    // a real worker chunk). Excluding them lets Vite serve the packages
+    // directly from node_modules, where the worker URL resolves correctly.
+    // Production builds are unaffected (already verified via `npm run build`).
+    exclude: ["@journeyapps/wa-sqlite", "@tanstack/browser-db-sqlite-persistence"],
+  },
 }));

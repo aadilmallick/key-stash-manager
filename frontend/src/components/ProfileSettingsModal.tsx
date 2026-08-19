@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useSecretsStore } from "../store/secretsStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,34 +21,157 @@ import {
   Upload,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { handleImportProfile as importProfileFromStore } from "../store/secretsStore";
 import { useSync } from "@/hooks/useSync";
+import { useDbCollections } from "@/hooks/useDb";
+import {
+  useCurrentProfile,
+  useProfileActions,
+  useProfileStats,
+  useProfiles,
+} from "@/hooks/useProfiles";
+import {
+  exportAllProfilesFile,
+  exportProfileFile,
+  importSingleProfile,
+} from "@/lib/db/importExport";
 
 interface ProfileSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+const ProfileRow = ({
+  profile,
+  isCurrent,
+  editingProfileId,
+  editingProfileName,
+  setEditingProfileName,
+  startEditing,
+  cancelEditing,
+  handleRenameProfile,
+  handleSwitchProfile,
+  handleDeleteProfile,
+  canDelete,
+  isSyncing,
+}: {
+  profile: { id: string; name: string; createdAt: string };
+  isCurrent: boolean;
+  editingProfileId: string | null;
+  editingProfileName: string;
+  setEditingProfileName: (name: string) => void;
+  startEditing: (id: string, name: string) => void;
+  cancelEditing: () => void;
+  handleRenameProfile: (id: string) => void;
+  handleSwitchProfile: (id: string) => void;
+  handleDeleteProfile: (id: string, name: string) => void;
+  canDelete: boolean;
+  isSyncing: boolean;
+}) => {
+  const { folderCount, secretCount } = useProfileStats(profile.id);
+
+  return (
+    <div
+      className={`p-4 rounded-lg border ${
+        isCurrent ? "border-blue-300 bg-blue-50" : "border-gray-200 bg-white"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          {editingProfileId === profile.id ? (
+            <div className="flex items-center gap-2">
+              <Input
+                value={editingProfileName}
+                onChange={(e) => setEditingProfileName(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter") handleRenameProfile(profile.id);
+                  if (e.key === "Escape") cancelEditing();
+                }}
+                className="max-w-xs"
+                autoFocus
+              />
+              <Button
+                size="sm"
+                onClick={() => handleRenameProfile(profile.id)}
+                disabled={!editingProfileName.trim()}
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="outline" onClick={cancelEditing}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium">{profile.name}</h3>
+                {isCurrent && (
+                  <Badge variant="default" className="text-xs">
+                    Current
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-gray-600">
+                {folderCount} folder(s) • {secretCount} secret(s)
+              </p>
+              <p className="text-xs text-gray-500">
+                Created: {new Date(profile.createdAt).toLocaleDateString()}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {!isCurrent && (
+            <Button
+              size="sm"
+              onClick={() => handleSwitchProfile(profile.id)}
+              variant="outline"
+            >
+              Switch
+            </Button>
+          )}
+
+          {editingProfileId !== profile.id && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => startEditing(profile.id, profile.name)}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+
+              {canDelete && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleDeleteProfile(profile.id, profile.name)}
+                  disabled={isSyncing}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ProfileSettingsModal = ({
   isOpen,
   onClose,
 }: ProfileSettingsModalProps) => {
+  const { collections, vaultKey } = useDbCollections();
+  const profiles = useProfiles();
+  const currentProfile = useCurrentProfile();
+  const { folderCount, secretCount } = useProfileStats(currentProfile?.id);
+  const { addProfile, deleteProfile, renameProfile, setCurrentProfile } =
+    useProfileActions();
   const {
-    data,
-    addProfile,
-    deleteProfile,
-    renameProfile,
-    setCurrentProfile,
-    getCurrentProfile,
-    refreshData,
-    exportAllProfiles,
-    exportCurrentProfile,
-  } = useSecretsStore();
-  const {
-    pushChangesToServer,
     isSyncing,
-    startSyncLoading,
-    stopSyncLoading,
     saveChangesToServer,
   } = useSync();
 
@@ -57,8 +179,6 @@ const ProfileSettingsModal = ({
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
   const [editingProfileName, setEditingProfileName] = useState("");
   const { toast } = useToast();
-
-  const currentProfile = getCurrentProfile();
 
   const handleAddProfile = () => {
     if (!newProfileName.trim()) {
@@ -70,9 +190,8 @@ const ProfileSettingsModal = ({
       return;
     }
 
-    // Check for duplicate names
-    const exists = data.profiles.some(
-      (p) => p.name.toLowerCase() === newProfileName.trim().toLowerCase()
+    const exists = profiles.some(
+      (p) => p.name.toLowerCase() === newProfileName.trim().toLowerCase(),
     );
     if (exists) {
       toast({
@@ -93,7 +212,7 @@ const ProfileSettingsModal = ({
   };
 
   const handleDeleteProfile = (profileId: string, profileName: string) => {
-    if (data.profiles.length <= 1) {
+    if (profiles.length <= 1) {
       toast({
         title: "Error",
         description: "Cannot delete the last profile",
@@ -104,7 +223,7 @@ const ProfileSettingsModal = ({
 
     if (
       confirm(
-        `Are you sure you want to delete the profile "${profileName}"? This action cannot be undone.`
+        `Are you sure you want to delete the profile "${profileName}"? This action cannot be undone.`,
       )
     ) {
       deleteProfile(profileId);
@@ -126,11 +245,10 @@ const ProfileSettingsModal = ({
       return;
     }
 
-    // Check for duplicate names
-    const exists = data.profiles.some(
+    const exists = profiles.some(
       (p) =>
         p.id !== profileId &&
-        p.name.toLowerCase() === editingProfileName.trim().toLowerCase()
+        p.name.toLowerCase() === editingProfileName.trim().toLowerCase(),
     );
     if (exists) {
       toast({
@@ -153,7 +271,7 @@ const ProfileSettingsModal = ({
 
   const handleSwitchProfile = (profileId: string) => {
     setCurrentProfile(profileId);
-    const profile = data.profiles.find((p) => p.id === profileId);
+    const profile = profiles.find((p) => p.id === profileId);
     toast({
       title: "Profile Switched",
       description: `Switched to "${profile?.name}"`,
@@ -177,18 +295,16 @@ const ProfileSettingsModal = ({
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
-        importProfileFromStore(content);
-
-        // Refresh the store data to show the imported profile
-        refreshData();
+        await importSingleProfile(content, collections, vaultKey);
 
         toast({
           title: "Success",
           description: "Profile imported successfully",
         });
+        saveChangesToServer();
       } catch (error) {
         toast({
           title: "Error",
@@ -200,9 +316,7 @@ const ProfileSettingsModal = ({
     };
     reader.readAsText(file);
 
-    // Reset the input
     event.target.value = "";
-    saveChangesToServer();
   };
 
   return (
@@ -231,12 +345,7 @@ const ProfileSettingsModal = ({
                   {currentProfile?.name}
                 </h3>
                 <p className="text-sm text-blue-700">
-                  {currentProfile?.folders.length} folder(s) •
-                  {currentProfile?.folders.reduce(
-                    (acc, folder) => acc + folder.secrets.length,
-                    0
-                  )}{" "}
-                  secret(s)
+                  {folderCount} folder(s) • {secretCount} secret(s)
                 </p>
               </div>
               <Badge variant="default">Active</Badge>
@@ -268,7 +377,10 @@ const ProfileSettingsModal = ({
               />
               <Button
                 variant="outline"
-                onClick={() => exportCurrentProfile()}
+                onClick={() =>
+                  currentProfile &&
+                  exportProfileFile(collections, vaultKey, currentProfile.id)
+                }
                 disabled={!currentProfile || isSyncing}
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -276,7 +388,7 @@ const ProfileSettingsModal = ({
               </Button>
               <Button
                 variant="outline"
-                onClick={() => exportAllProfiles()}
+                onClick={() => exportAllProfilesFile(collections, vaultKey)}
                 disabled={isSyncing}
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -309,117 +421,25 @@ const ProfileSettingsModal = ({
           {/* Profiles List */}
           <div className="space-y-3">
             <Label className="text-base font-semibold">
-              All Profiles ({data.profiles.length})
+              All Profiles ({profiles.length})
             </Label>
             <div className="space-y-3">
-              {data.profiles.map((profile) => (
-                <div
+              {profiles.map((profile) => (
+                <ProfileRow
                   key={profile.id}
-                  className={`p-4 rounded-lg border ${
-                    profile.id === data.currentProfileId
-                      ? "border-blue-300 bg-blue-50"
-                      : "border-gray-200 bg-white"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      {editingProfileId === profile.id ? (
-                        <div className="flex items-center gap-2">
-                          <Input
-                            value={editingProfileName}
-                            onChange={(e) =>
-                              setEditingProfileName(e.target.value)
-                            }
-                            onKeyPress={(e) => {
-                              if (e.key === "Enter")
-                                handleRenameProfile(profile.id);
-                              if (e.key === "Escape") cancelEditing();
-                            }}
-                            className="max-w-xs"
-                            autoFocus
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => handleRenameProfile(profile.id)}
-                            disabled={!editingProfileName.trim()}
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={cancelEditing}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-medium">{profile.name}</h3>
-                            {profile.id === data.currentProfileId && (
-                              <Badge variant="default" className="text-xs">
-                                Current
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-600">
-                            {profile.folders.length} folder(s) •
-                            {profile.folders.reduce(
-                              (acc, folder) => acc + folder.secrets.length,
-                              0
-                            )}{" "}
-                            secret(s)
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Created:{" "}
-                            {new Date(profile.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {profile.id !== data.currentProfileId && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleSwitchProfile(profile.id)}
-                          variant="outline"
-                        >
-                          Switch
-                        </Button>
-                      )}
-
-                      {editingProfileId !== profile.id && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              startEditing(profile.id, profile.name)
-                            }
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-
-                          {data.profiles.length > 1 && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                handleDeleteProfile(profile.id, profile.name)
-                              }
-                              disabled={isSyncing}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                  profile={profile}
+                  isCurrent={profile.id === currentProfile?.id}
+                  editingProfileId={editingProfileId}
+                  editingProfileName={editingProfileName}
+                  setEditingProfileName={setEditingProfileName}
+                  startEditing={startEditing}
+                  cancelEditing={cancelEditing}
+                  handleRenameProfile={handleRenameProfile}
+                  handleSwitchProfile={handleSwitchProfile}
+                  handleDeleteProfile={handleDeleteProfile}
+                  canDelete={profiles.length > 1}
+                  isSyncing={isSyncing}
+                />
               ))}
             </div>
           </div>

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useSecretsStore } from "../store/secretsStore";
 import { Folder, Plus, Pencil, Trash2, Settings, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,25 +11,27 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import ProfileSettingsModal from "./ProfileSettingsModal";
+import { useCurrentProfile, useProfileStats } from "@/hooks/useProfiles";
+import {
+  useFolderActions,
+  useFolderSecretCounts,
+  useFoldersForProfile,
+  useSelectedFolderId,
+} from "@/hooks/useFolders";
 
 const FolderSidebar = () => {
-  const {
-    data,
-    selectedFolderId,
-    setSelectedFolder,
-    addFolder,
-    deleteFolder,
-    renameFolder,
-    getCurrentProfile,
-  } = useSecretsStore();
+  const currentProfile = useCurrentProfile();
+  const folders = useFoldersForProfile(currentProfile?.id);
+  const folderSecretCounts = useFolderSecretCounts(currentProfile?.id);
+  const { folderCount, secretCount } = useProfileStats(currentProfile?.id);
+  const [selectedFolderId, setSelectedFolderId] = useSelectedFolderId();
+  const { addFolder, deleteFolder, renameFolder } = useFolderActions();
 
   const [isAddingFolder, setIsAddingFolder] = useState(false);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState("");
   const [editFolderName, setEditFolderName] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
-  const currentProfile = getCurrentProfile();
 
   const handleAddFolder = () => {
     if (newFolderName.trim()) {
@@ -86,12 +87,7 @@ const FolderSidebar = () => {
               {currentProfile.name}
             </h3>
             <p className="text-xs text-gray-500">
-              {currentProfile.folders.length} folder(s) •
-              {currentProfile.folders.reduce(
-                (acc, folder) => acc + folder.secrets.length,
-                0
-              )}{" "}
-              secret(s)
+              {folderCount} folder(s) • {secretCount} secret(s)
             </p>
           </div>
           <Badge variant="secondary" className="text-xs">
@@ -141,7 +137,7 @@ const FolderSidebar = () => {
       </div>
 
       <div className="space-y-1 overflow-y-auto max-h-[60vh]" role="list">
-        {currentProfile.folders.map((folder) => (
+        {folders.map((folder) => (
           <div
             key={folder.id}
             className={`flex items-center justify-between flex-wrap gap-y-2 p-2 rounded-md cursor-pointer group ${
@@ -149,7 +145,7 @@ const FolderSidebar = () => {
                 ? "bg-blue-100 text-blue-900"
                 : "hover:bg-gray-100"
             }`}
-            onClick={() => setSelectedFolder(folder.id)}
+            onClick={() => setSelectedFolderId(folder.id)}
           >
             <div className="flex items-center gap-2 flex-1">
               <Folder className="h-4 w-4" />
@@ -169,7 +165,7 @@ const FolderSidebar = () => {
                 <span className="text-sm">{folder.name}</span>
               )}
               <span className="text-xs text-gray-500">
-                ({folder.secrets.length})
+                ({folderSecretCounts.get(folder.id) ?? 0})
               </span>
             </div>
 

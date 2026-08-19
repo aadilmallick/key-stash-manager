@@ -1,13 +1,16 @@
 import { z } from "zod";
 
+// Nested "wire format" - used for JSON import/export and /api/sync payloads.
+// Runtime storage is the flat, relational schema in `src/lib/db/schema.ts`.
 export interface Secret {
   id: string;
   name: string;
   value: string;
-  tags: string[];
   description?: string;
-  createdAt: string;
-  updatedAt: string;
+  // Optional to match secretZodSchema - imported files may omit timestamps;
+  // flattenNestedSecretsData (lib/db/migrations.ts) fills in defaults.
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Folder {
@@ -20,8 +23,8 @@ export interface Profile {
   id: string;
   name: string;
   folders: Folder[];
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface SecretsData {
@@ -33,7 +36,6 @@ export const secretZodSchema = z.object({
   id: z.string(),
   name: z.string(),
   value: z.string(),
-  tags: z.array(z.string()),
   description: z.string().optional(),
   createdAt: z.string().datetime().optional(),
   updatedAt: z.string().datetime().optional(),

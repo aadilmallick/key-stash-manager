@@ -22,19 +22,16 @@ interface SecretModalProps {
 const SecretModal = ({ isOpen, onClose, secret, onSave }: SecretModalProps) => {
   const [name, setName] = useState("");
   const [value, setValue] = useState("");
-  const [tags, setTags] = useState("");
   const [description, setDescription] = useState("");
 
   useEffect(() => {
     if (secret) {
       setName(secret.name);
       setValue(secret.value);
-      setTags(secret.tags.join(", "));
       setDescription(secret.description || "");
     } else {
       setName("");
       setValue("");
-      setTags("");
       setDescription("");
     }
   }, [secret, isOpen]);
@@ -42,15 +39,9 @@ const SecretModal = ({ isOpen, onClose, secret, onSave }: SecretModalProps) => {
   const handleSave = () => {
     if (!name.trim() || !value.trim()) return;
 
-    const tagsArray = tags
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0);
-
     onSave({
       name: name.trim(),
       value: value.trim(),
-      tags: tagsArray,
       description: description.trim(),
     });
 
@@ -98,20 +89,6 @@ const SecretModal = ({ isOpen, onClose, secret, onSave }: SecretModalProps) => {
             />
             <p className="text-sm text-gray-500 mt-1">
               You can add an optional description for this secret.
-            </p>
-          </div>
-
-          <div>
-            <Label htmlFor="tags">Tags</Label>
-            <Input
-              id="tags"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              placeholder="tag1, tag2, tag3"
-              className="placeholder:text-gray-500"
-            />
-            <p className="text-sm text-gray-500 mt-1">
-              Separate multiple tags with commas
             </p>
           </div>
 

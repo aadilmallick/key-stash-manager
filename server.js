@@ -148,7 +148,6 @@ const secretSchema = z.object({
   id: z.string(),
   name: z.string(),
   value: z.string(),
-  tags: z.array(z.string()),
   description: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
