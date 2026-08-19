@@ -4,3 +4,4 @@ keys.json
 data/
 .vite/
 example-full-export.json
+.DS_Store
