@@ -5,6 +5,7 @@ const fs = require("fs/promises");
 const fsSync = require("fs");
 const { z } = require("zod");
 const dotenv = require("dotenv");
+const { handleSpendProxyRequest } = require("./frontend/netlify/functions/_shared/spendProxy.cjs");
 
 dotenv.config();
 console.log(process.env.USING_SERVER);
@@ -200,6 +201,16 @@ app.post("/api/sync", async (req, res) => {
       error: `Failed to save data: ${error.message}`,
       details: error.issues || error.errors || [],
     });
+  }
+});
+
+app.post("/api/proxy-spend", async (req, res) => {
+  try {
+    const { status, body } = await handleSpendProxyRequest(req.body);
+    res.status(status).json(body);
+  } catch (error) {
+    console.error("Error in POST /api/proxy-spend:", error);
+    res.status(500).json({ error: "Failed to proxy spend request" });
   }
 });
 

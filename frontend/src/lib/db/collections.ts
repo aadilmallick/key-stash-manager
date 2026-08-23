@@ -15,6 +15,8 @@ import {
   profileRowSchema,
   SecretRow,
   secretRowSchema,
+  SpendProviderRow,
+  spendProviderRowSchema,
 } from "./schema";
 
 export interface Collections {
@@ -22,6 +24,7 @@ export interface Collections {
   folders: Collection<FolderRow, string>;
   secrets: Collection<SecretRow, string>;
   config: Collection<ConfigRow, string>;
+  spendProviders: Collection<SpendProviderRow, string>;
 }
 
 // persistedCollectionOptions needs explicit T/TKey/TSchema generics - its
@@ -102,6 +105,11 @@ async function createCollections(): Promise<Collections> {
       id: "config",
       getKey: (c: ConfigRow) => c.key,
       schema: configRowSchema,
+    }),
+    spendProviders: createPersistedCollection(persistence, {
+      id: "spendProviders",
+      getKey: (p: SpendProviderRow) => p.id,
+      schema: spendProviderRowSchema,
     }),
   };
 

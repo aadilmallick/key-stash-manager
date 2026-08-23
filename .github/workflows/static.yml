@@ -35,21 +35,21 @@ jobs:
         with:
           node-version: "24"
       - name: Install dependencies
-        run: cd frontend && npm ci
+        run: cd landing && npm install
       - name: Build
-        run: cd frontend && npm run build
+        run: cd landing && npm run build
         id: build
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v4.6.2
         with:
           name: dist
-          path: ./frontend/dist/
+          path: ./landing/dist/
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './frontend/dist'
+          path: "./landing/dist"
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

@@ -1,0 +1,30 @@
+[build]
+  base = "frontend"
+  publish = "dist"
+  command = "npm run build"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Rule order matters: the /api/* rewrite to Functions must come before the
+# SPA catch-all below, or the catch-all would swallow /api/proxy-spend.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# `command` is explicit about running the frontend's Vite dev server
+# (not "npm run dev" bare, which resolves to the repo-root package.json's
+# Docker/Express dev script instead, since [dev].command runs from the
+# repo root regardless of [build].base).
+[dev]
+  command = "npm run dev --prefix frontend"
+  targetPort = 5173
+  port = 8888
+  framework = "#custom"

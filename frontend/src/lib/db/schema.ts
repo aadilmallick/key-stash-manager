@@ -36,10 +36,28 @@ export const configRowSchema = z.object({
   value: z.string(),
 });
 
+// Billing/admin API keys for the API Spend feature. Global (not scoped to
+// profileId) - these credentials belong to a provider account/org, not a
+// profile. `encryptedApiKey` follows the same convention as
+// secretRowSchema.value; `lastSnapshot` holds JSON.stringify(SpendSnapshot)
+// unencrypted, since spend numbers aren't sensitive the way the key is.
+export const spendProviderRowSchema = z.object({
+  id: z.string(),
+  provider: z.enum(["openai", "openrouter"]),
+  label: z.string().optional(),
+  encryptedApiKey: z.string(),
+  budgetUsd: z.number().optional(),
+  lastSnapshot: z.string().optional(),
+  lastError: z.string().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
 export type ProfileRow = z.infer<typeof profileRowSchema>;
 export type FolderRow = z.infer<typeof folderRowSchema>;
 export type SecretRow = z.infer<typeof secretRowSchema>;
 export type ConfigRow = z.infer<typeof configRowSchema>;
+export type SpendProviderRow = z.infer<typeof spendProviderRowSchema>;
 
 export const CONFIG_KEYS = {
   CURRENT_PROFILE_ID: "currentProfileId",

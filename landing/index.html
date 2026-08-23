@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>landing</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style lang="text/css">
+    body {
+      margin: 0;
+      font-family: 'Inter',system-ui,sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+    .kt-ascii-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0 0 48px;
+    }
+    .kt-ascii-w2 {
+      animation: kt-float 3.5s ease-in-out alternate infinite;
+      will-change: transform;
+    }
+    .kt-ascii-text {
+      font-family: monospace;
+      white-space: pre;
+      margin: 0;
+      color: #3B82F6;
+      font-size: 8px;
+      line-height: 1.1;
+      animation: kt-glow 3.5s ease-in-out alternate infinite;
+    }
+    @keyframes kt-float {
+      0%,
+      100% {
+        translate: 0 0;
+      }
+      50% {
+        translate: 0 -12px;
+      }
+    }
+    @keyframes kt-glow {
+      0%,
+      100% {
+        text-shadow: 0 0 4px currentColor,0 0 10px currentColor;
+      }
+      50% {
+        text-shadow: 0 0 14px currentColor,0 0 22px currentColor;
+      }
+    }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
