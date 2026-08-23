@@ -170,7 +170,7 @@ interface SpendProxyRequest {
 
 export async function fetchProviderSpend(req: SpendProxyRequest) {
   // Check if running in local Docker self-hosted mode or cloud SaaS
-  const baseUrl = process.env.NEXT_PUBLIC_IS_DOCKER 
+  const baseUrl = process.env.VITE_USING_SERVER
     ? 'http://localhost:3000/api/proxy-spend' 
     : 'https://api.keystash.app/.netlify/functions/proxy-spend';
 

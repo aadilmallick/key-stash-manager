@@ -42,7 +42,7 @@ test.describe("JSON export/import round trip", () => {
     await page.getByRole("button", { name: "Import Secrets" }).click();
     const importDialog = page.locator("#import-modal");
     await expect(importDialog).toBeVisible();
-    await importDialog.locator('input[type="file"]').setInputFiles(exportPath);
+    await importDialog.locator('input[type="file"]').first().setInputFiles(exportPath);
     await page
       .getByRole("alertdialog")
       .getByRole("button", { name: "Import" })

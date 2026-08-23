@@ -13,6 +13,7 @@ import {
   Check,
   Download,
   Edit,
+  Lock,
   Plus,
   Settings,
   Trash2,
@@ -35,6 +36,7 @@ import {
   exportProfileFile,
   importSingleProfile,
 } from "@/lib/db/importExport";
+import ShareSecurelyModal from "./ShareSecurelyModal";
 
 interface ProfileSettingsModalProps {
   isOpen: boolean;
@@ -186,6 +188,7 @@ const ProfileSettingsModal = ({
   const [newProfileName, setNewProfileName] = useState("");
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
   const [editingProfileName, setEditingProfileName] = useState("");
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const { toast } = useToast();
   const confirm = useConfirm();
 
@@ -405,6 +408,23 @@ const ProfileSettingsModal = ({
             </div>
           </div>
 
+          {/* Share Securely (manual E2E encryption, no server) */}
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Share Securely</Label>
+            <p className="text-sm text-gray-600">
+              Encrypt a profile export locally for sending directly to
+              someone else.
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => setIsShareModalOpen(true)}
+              disabled={isSyncing}
+            >
+              <Lock className="h-4 w-4 mr-2" />
+              Share Securely
+            </Button>
+          </div>
+
           {/* Add New Profile */}
           <div className="space-y-3">
             <Label className="text-base font-semibold">Add New Profile</Label>
@@ -466,6 +486,11 @@ const ProfileSettingsModal = ({
           </div>
         </div>
       </DialogContent>
+
+      <ShareSecurelyModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+      />
     </Dialog>
   );
 };

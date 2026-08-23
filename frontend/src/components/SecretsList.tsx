@@ -34,7 +34,11 @@ import { useDecryptedSecretsForFolder, useSecretActions } from "@/hooks/useSecre
 import { useAppState } from "@/hooks/useAppState";
 import { useConfirm } from "@/hooks/useConfirm";
 import { useDbCollections } from "@/hooks/useDb";
-import { exportAllProfilesFile, importAllFromJson } from "@/lib/db/importExport";
+import {
+  exportAllProfilesFile,
+  importAllFromJson,
+  importEncryptedShare,
+} from "@/lib/db/importExport";
 
 const SecretsList = () => {
   const { collections, vaultKey } = useDbCollections();
@@ -64,6 +68,11 @@ const SecretsList = () => {
   } = useSync();
   const [importEnvFileContents, setImportEnvFileContents] =
     useState<string>("");
+  const [encryptedShareFile, setEncryptedShareFile] = useState<File | null>(
+    null,
+  );
+  const [encryptedShareToken, setEncryptedShareToken] = useState("");
+  const [isImportingShare, setIsImportingShare] = useState(false);
 
   const filteredSecrets = decryptedSecrets.filter((secret) => {
     if (!searchTerm) return true;
@@ -292,6 +301,54 @@ const SecretsList = () => {
       });
     } finally {
       stopSyncLoading();
+    }
+  }
+
+  async function importEncryptedShareFile() {
+    if (!encryptedShareFile || !encryptedShareToken.trim()) return;
+
+    // Native <dialog> elements render in the browser's top layer, above
+    // any portal-rendered Radix content - close this one first, or the
+    // confirm AlertDialog would be visually stuck underneath it and
+    // unclickable (same fix as the plaintext import path above).
+    (
+      document.getElementById("import-modal") as HTMLDialogElement | null
+    )?.close();
+
+    const confirmed = await confirm({
+      title: "Import encrypted share",
+      description:
+        "This will overwrite all current data if the file is a full export, or add a new profile alongside your existing ones if it's a single profile. This action cannot be undone.",
+      confirmLabel: "Import",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
+
+    setIsImportingShare(true);
+    try {
+      const ciphertextText = await encryptedShareFile.text();
+      await importEncryptedShare(
+        ciphertextText,
+        encryptedShareToken.trim(),
+        collections,
+        vaultKey,
+      );
+      saveChangesToServer();
+      toast({
+        title: "Import successful",
+        description: "The encrypted share has been decrypted and imported.",
+      });
+      setEncryptedShareFile(null);
+      setEncryptedShareToken("");
+    } catch (e) {
+      toast({
+        title: "Import failed",
+        description:
+          "Couldn't decrypt this share. Check that the file and token match.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImportingShare(false);
     }
   }
 
@@ -620,6 +677,52 @@ const SecretsList = () => {
                 }
               }}
             />
+          </div>
+
+          <div className="pt-4 mt-4 border-t space-y-2">
+            <h4 className="text-base font-bold">
+              Or import an encrypted share
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              Received an encrypted file and a decryption token from someone
+              else? Upload the file and paste the token here.
+            </p>
+            <p className="text-red-400 text-sm">
+              Caution: this may overwrite all current data (if it's a full
+              export) or add a new profile (if it's a single profile). This
+              cannot be undone.
+            </p>
+
+            <div>
+              <Label htmlFor="encrypted-share-file">Encrypted file</Label>
+              <Input
+                id="encrypted-share-file"
+                type="file"
+                onChange={(e) =>
+                  setEncryptedShareFile(e.target.files?.[0] ?? null)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="encrypted-share-token">Decryption token</Label>
+              <Input
+                id="encrypted-share-token"
+                value={encryptedShareToken}
+                onChange={(e) => setEncryptedShareToken(e.target.value)}
+                placeholder="Paste the decryption token here"
+                className="font-mono text-xs"
+              />
+            </div>
+            <Button
+              variant="destructive"
+              className="w-full"
+              disabled={
+                !encryptedShareFile ||
+                !encryptedShareToken.trim() ||
+                isImportingShare}
+              onClick={importEncryptedShareFile}
+            >
+              {isImportingShare ? "Importing..." : "Import Encrypted Share"}
+            </Button>
           </div>
         </dialog>
 

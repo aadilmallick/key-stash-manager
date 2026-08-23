@@ -6,6 +6,7 @@ import {
   secretsDataSchema,
 } from "@/types";
 import { decryptValue } from "@/lib/crypto";
+import { decryptFromSharing, encryptForSharing } from "@/lib/e2eShare";
 import { Collections, upsertConfig } from "./collections";
 import { CONFIG_KEYS } from "./schema";
 import { encryptSecretRows, flattenNestedSecretsData } from "./migrations";
@@ -211,6 +212,17 @@ function downloadJson(filename: string, data: unknown) {
   URL.revokeObjectURL(url);
 }
 
+export function downloadText(filename: string, content: string) {
+  const blob = new Blob([content], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export async function exportAllProfilesFile(
   collections: Collections,
   vaultKey: CryptoKey,
@@ -235,4 +247,62 @@ export async function exportProfileFile(
     `export-profile-${safeName}-${profile.id.slice(0, 8)}.json`,
     profile,
   );
+}
+
+// Manual E2E sharing (see DOCS/feat/04-e2e-encryption.md, "Path A: Manual
+// Download" - no server involved). Builds the exact same nested JSON the
+// plaintext export buttons produce, then encrypts it with a fresh one-time
+// key via lib/e2eShare.ts. The caller is responsible for downloading the
+// returned ciphertext separately from displaying the token - keeping them
+// on two different channels is the entire security model here.
+export type ShareScope = { type: "all" } | { type: "profile"; profileId: string };
+
+export async function buildEncryptedShare(
+  collections: Collections,
+  vaultKey: CryptoKey,
+  scope: ShareScope,
+): Promise<{ ciphertext: string; token: string; filename: string }> {
+  const data = await buildNestedSecretsData(collections, vaultKey);
+  const date = new Date().toISOString().split("T")[0];
+
+  if (scope.type === "all") {
+    const { ciphertext, token } = await encryptForSharing(JSON.stringify(data));
+    return { ciphertext, token, filename: `export-all-profiles-encrypted-${date}.enc` };
+  }
+
+  const profile = data.profiles.find((p) => p.id === scope.profileId);
+  if (!profile) throw new Error("Profile not found");
+  const safeName = profile.name.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(0, 64);
+  const { ciphertext, token } = await encryptForSharing(JSON.stringify(profile));
+  return {
+    ciphertext,
+    token,
+    filename: `export-profile-${safeName}-encrypted-${date}.enc`,
+  };
+}
+
+// Decrypts a manually-shared file+token pair and imports it. Which import
+// path runs is auto-detected from the decrypted shape - checked in this
+// order deliberately: the legacy V1 schema (`importAllFromJson`'s fallback)
+// only requires a `folders` array and isn't `.strict()`, so a lone Profile
+// export would *also* satisfy it and get silently misfiled as a generic
+// "Imported" profile instead of going through importSingleProfile's proper
+// name/id dedupe. Checking the single-profile shape first avoids that; a
+// full multi-profile SecretsData object can't match profileZodSchema (no
+// top-level id/name/folders), so there's no reverse ambiguity.
+export async function importEncryptedShare(
+  ciphertextText: string,
+  token: string,
+  collections: Collections,
+  vaultKey: CryptoKey,
+): Promise<void> {
+  const plaintext = await decryptFromSharing(ciphertextText, token);
+  const parsed = JSON.parse(plaintext);
+
+  if (profileZodSchema.safeParse(parsed).success) {
+    await importSingleProfile(plaintext, collections, vaultKey);
+    return;
+  }
+
+  await importAllFromJson(plaintext, collections, vaultKey);
 }

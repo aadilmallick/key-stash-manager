@@ -23,7 +23,7 @@ profiles.
 
 - **UI/UX**: The main focus of this app is UI/UX, so it must be very polished
   and uphold accessibility rules
-- [ ] **Client-side encryption at rest**: Prevents reading plaintext data,
+- [x] **Client-side encryption at rest**: Prevents reading plaintext data,
       always encrypted at rest and then decrypted client side
 
 #### High priority functional requirements
