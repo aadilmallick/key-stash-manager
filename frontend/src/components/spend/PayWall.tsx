@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Wallet } from "lucide-react";
 import { config } from "@/lib/config/config";
+import { env } from "@/lib/config/env";
 
 interface PayWallProps {
   children: React.ReactNode;
@@ -14,6 +15,17 @@ interface PayWallProps {
 // users see the same explanation + Clerk pricing table (has() is false for
 // both), with an extra nudge to sign in first when signed out.
 const PayWall = ({ children }: PayWallProps) => {
+  // VITE_IS_TESTING is read once from import.meta.env and never changes for
+  // the lifetime of a running app instance, so this branch is always taken
+  // the same way across every render of a given PayWall instance - safe
+  // despite the lint rule below, which can't see that invariant. It has to
+  // come before the useAuth() call: no ClerkProvider is mounted in App.tsx
+  // when this flag is set, so useAuth() would throw.
+  if (env.VITE_IS_TESTING()) {
+    return <>{children}</>;
+  }
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { isLoaded, has } = useAuth();
 
   if (!isLoaded) {

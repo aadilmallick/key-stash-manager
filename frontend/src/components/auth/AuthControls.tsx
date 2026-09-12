@@ -1,10 +1,17 @@
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/react";
 import { Button } from "@/components/ui/button";
+import { env } from "@/lib/config/env";
 
 // Optional, feature-gated auth: signing in isn't required to use the
 // Secrets tab or global search, only the Pro-gated API Spend tab (see
 // PayWall.tsx). This just gives users a way to create/access an account.
 const AuthControls = () => {
+  // No ClerkProvider is mounted when VITE_IS_TESTING is set (App.tsx), so
+  // none of the Clerk components below have anything to render against.
+  if (env.VITE_IS_TESTING()) {
+    return null;
+  }
+
   return (
     <div className="flex items-center gap-2">
       <Show when="signed-out">

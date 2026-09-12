@@ -9,6 +9,10 @@ import { test, expect } from "@playwright/test";
 // `vite dev`, this suite's webServer, provides).
 test.describe("API Spend tab", () => {
   test("shows the Pro paywall instead of the real tab when signed out", async ({ page }) => {
+    test.skip(
+      !!process.env.VITE_IS_TESTING,
+      "the paywall is intentionally bypassed when VITE_IS_TESTING is set - see testing-mode-bypass.spec.ts",
+    );
     await page.goto("/");
     await expect(page.getByRole("button", { name: "Add Secret" })).toBeVisible({
       timeout: 15000,
