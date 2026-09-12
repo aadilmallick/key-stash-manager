@@ -102,6 +102,7 @@ const SecretRow = ({
   return (
     <div
       ref={rowRef}
+      role="listitem"
       className={`bg-white border rounded-lg p-4 shadow-sm transition-colors ${
         isDragging ? "opacity-40" : ""
       } ${isOver ? "border-blue-400 bg-blue-50" : "border-gray-200"}`}
@@ -109,12 +110,15 @@ const SecretRow = ({
       <div className="flex items-start justify-between gap-3">
         <div
           ref={handleRef}
-          className={`mt-1 text-gray-400 ${
+          role="button"
+          tabIndex={0}
+          className={`mt-1 text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-400 rounded ${
             reorderingDisabled
               ? "cursor-not-allowed opacity-40"
               : "cursor-grab hover:text-gray-600"
           }`}
           aria-label={`Drag to reorder ${secret.name}`}
+          onKeyDown={(e) => e.stopPropagation()}
         >
           <GripVertical className="h-4 w-4" />
         </div>
@@ -126,7 +130,7 @@ const SecretRow = ({
         />
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
-            <h3 className="font-medium text-gray-900">{secret.name}</h3>
+            <h2 className="font-medium text-gray-900 text-base">{secret.name}</h2>
           </div>
           {secret.description && (
             <div className="mb-2">
@@ -153,7 +157,12 @@ const SecretRow = ({
             <div className="flex items-center gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" onClick={onToggleVisibility}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onToggleVisibility}
+                    aria-label={isVisible ? "Hide secret value" : "Show secret value"}
+                  >
                     {isVisible ? (
                       <EyeOff className="h-4 w-4" />
                     ) : (
@@ -168,7 +177,12 @@ const SecretRow = ({
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" onClick={onCopyValue}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onCopyValue}
+                    aria-label="Copy secret value"
+                  >
                     {isCopied ? (
                       <Check className="h-4 w-4" />
                     ) : (
@@ -183,7 +197,12 @@ const SecretRow = ({
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" onClick={onCopyEnv}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onCopyEnv}
+                    aria-label="Copy secret as environment variable"
+                  >
                     {isCopied ? (
                       <Check className="h-4 w-4" color="#36b328" />
                     ) : (
@@ -218,6 +237,7 @@ const SecretRow = ({
                     variant="outline"
                     size="sm"
                     onClick={onDelete}
+                    aria-label="Delete secret"
                     className="text-red-600 hover:text-red-700"
                   >
                     <Trash2 className="h-4 w-4" />

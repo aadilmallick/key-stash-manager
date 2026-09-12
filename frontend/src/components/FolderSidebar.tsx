@@ -122,6 +122,7 @@ const FolderRowItem = ({
   return (
     <div
       ref={rowRef}
+      role="listitem"
       className={`flex items-center justify-between flex-wrap gap-y-2 p-2 rounded-md cursor-pointer group transition-colors ${
         isDragging ? "opacity-40" : ""
       } ${
@@ -136,8 +137,11 @@ const FolderRowItem = ({
       <div className="flex items-center gap-2 flex-1">
         <div
           ref={handleRef}
-          className="text-gray-400 cursor-grab hover:text-gray-600"
+          role="button"
+          tabIndex={0}
+          className="text-gray-400 cursor-grab hover:text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-400 rounded"
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
           aria-label={`Drag to reorder ${folder.name}`}
         >
           <GripVertical className="h-4 w-4" />
@@ -156,7 +160,13 @@ const FolderRowItem = ({
             />
           )
           : <span className="text-sm">{folder.name}</span>}
-        <span className="text-xs text-gray-500">({secretCount})</span>
+        <span
+          className={`text-xs ${
+            isSelected ? "text-blue-700 font-medium" : "text-gray-500"
+          }`}
+        >
+          ({secretCount})
+        </span>
       </div>
 
       {canManage && (
@@ -165,6 +175,7 @@ const FolderRowItem = ({
             variant="ghost"
             size="sm"
             className="h-6 w-6 p-0"
+            aria-label={`Edit ${folder.name} folder`}
             onClick={(e) => {
               e.stopPropagation();
               onStartEditing();
@@ -176,6 +187,7 @@ const FolderRowItem = ({
             variant="ghost"
             size="sm"
             className="h-6 w-6 p-0 text-red-600"
+            aria-label={`Delete ${folder.name} folder`}
             onClick={(e) => {
               e.stopPropagation();
               onDelete();
@@ -293,15 +305,16 @@ const FolderSidebar = () => {
             onClick={() => setIsSettingsOpen(true)}
             className="h-6 w-6 p-0"
             title="Profile Settings"
+            aria-label="Profile Settings"
           >
             <Settings className="h-4 w-4" />
           </Button>
         </div>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-gray-900 truncate">
+            <h2 className="font-semibold text-gray-900 truncate text-base">
               {currentProfile.name}
-            </h3>
+            </h2>
             <p className="text-xs text-gray-500">
               {folderCount} folder(s) • {secretCount} secret(s)
             </p>

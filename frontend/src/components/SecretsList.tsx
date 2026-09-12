@@ -413,7 +413,7 @@ const SecretsList = () => {
                 dialogid="import-modal"
                 variant="ghost"
                 disabled={isSyncing}
-                className="bg-orange-400 border-2 border-orange-700 cursor-pointer"
+                className="bg-orange-300 border-2 border-orange-700 cursor-pointer text-orange-950 font-medium hover:bg-orange-400"
               >
                 <Import className="h-4 w-4 mr-2" />
                 Import Secrets
@@ -422,9 +422,9 @@ const SecretsList = () => {
                 dialogid="import-env-modal"
                 variant="ghost"
                 disabled={isSyncing}
-                className="bg-green-400 border-2 border-green-700 cursor-pointer"
+                className="bg-emerald-300 border-2 border-emerald-700 cursor-pointer text-emerald-950 font-medium hover:bg-emerald-400"
               >
-                <Import className="h-4 w-4 mr-2" color="#197a2c" />
+                <Import className="h-4 w-4 mr-2" color="#064e3b" />
                 Import Env file
               </ToggleDialogButton>
               <Button
@@ -516,7 +516,7 @@ const SecretsList = () => {
             </div>
           )
           : (
-            <div className="space-y-4 max-h-[60vh] overflow-y-scroll pb-8 styled-scrollbar">
+            <div>
               {filteredSecrets.length === 0
                 ? (
                   <div className="text-center py-12 text-gray-500">
@@ -527,7 +527,7 @@ const SecretsList = () => {
                 )
                 : (
                   <>
-                    <div className="flex items-center gap-2 px-1">
+                    <div className="flex items-center gap-2 px-1 mb-3">
                       <Checkbox
                         checked={selectAllState}
                         onCheckedChange={(checked) =>
@@ -540,29 +540,34 @@ const SecretsList = () => {
                       />
                       <span className="text-sm text-gray-600">Select all</span>
                     </div>
-                    {filteredSecrets.map((secret) => (
-                      <SecretRow
-                        key={secret.id}
-                        secret={secret}
-                        isSelected={selection.isSelected(secret.id)}
-                        onToggleSelect={() => selection.toggle(secret.id)}
-                        isVisible={visibleSecrets.has(secret.id)}
-                        onToggleVisibility={() =>
-                          toggleSecretVisibility(secret.id)}
-                        isCopied={copiedSecrets.has(secret.id)}
-                        onCopyValue={() =>
-                          copyToClipboard(secret.value, secret.id)}
-                        onCopyEnv={() =>
-                          copyEnv(secret.name, secret.value, secret.id)}
-                        onEdit={() => {
-                          setEditingSecret(secret);
-                          setIsModalOpen(true);
-                        }}
-                        onDelete={() => handleDeleteSecret(secret.id)}
-                        reorderingDisabled={reorderingDisabled}
-                        onReorderDrop={handleReorderDrop}
-                      />
-                    ))}
+                    <div
+                      className="space-y-4 max-h-[60vh] overflow-y-scroll pb-8 styled-scrollbar"
+                      role="list"
+                    >
+                      {filteredSecrets.map((secret) => (
+                        <SecretRow
+                          key={secret.id}
+                          secret={secret}
+                          isSelected={selection.isSelected(secret.id)}
+                          onToggleSelect={() => selection.toggle(secret.id)}
+                          isVisible={visibleSecrets.has(secret.id)}
+                          onToggleVisibility={() =>
+                            toggleSecretVisibility(secret.id)}
+                          isCopied={copiedSecrets.has(secret.id)}
+                          onCopyValue={() =>
+                            copyToClipboard(secret.value, secret.id)}
+                          onCopyEnv={() =>
+                            copyEnv(secret.name, secret.value, secret.id)}
+                          onEdit={() => {
+                            setEditingSecret(secret);
+                            setIsModalOpen(true);
+                          }}
+                          onDelete={() => handleDeleteSecret(secret.id)}
+                          reorderingDisabled={reorderingDisabled}
+                          onReorderDrop={handleReorderDrop}
+                        />
+                      ))}
+                    </div>
                   </>
                 )}
             </div>

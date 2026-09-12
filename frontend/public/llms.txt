@@ -1,0 +1,16 @@
+# Key Stash Manager
+
+> A local-first, client-side encrypted credentials manager with live API spend monitoring.
+
+## Overview
+Key Stash Manager provides visual environment variable and secrets management directly on the client with zero cloud setup. Built with Web Crypto AES-GCM 256-bit encryption and IndexedDB/OPFS storage.
+
+## Features
+- **Local-First Security:** Encrypted at rest using the browser Web Crypto API.
+- **Visual Canvas & Profiles:** Group secrets by environments (dev, staging, prod) and project profiles.
+- **API Spend Monitoring:** Live balance and spend polling for OpenAI, Anthropic, and OpenRouter.
+- **Encrypted Sharing:** Export keys into client-encrypted payloads with ephemeral verification tokens.
+
+## Links
+- [Application](https://varstash.com)
+- [Source Code](https://github.com/aadilmallick/key-stash-manager)

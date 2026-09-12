@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import FolderSidebar from "../components/FolderSidebar";
@@ -9,11 +9,14 @@ import { AppStateProvider } from "@/hooks/useAppState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
-import SpendTab from "@/components/spend/SpendTab";
-import PayWall from "@/components/spend/PayWall";
-import GlobalSearchModal from "@/components/search/GlobalSearchModal";
 import AuthControls from "@/components/auth/AuthControls";
 import { useGlobalHotkey } from "@/hooks/useGlobalHotkey";
+
+const SpendTab = lazy(() => import("@/components/spend/SpendTab"));
+const PayWall = lazy(() => import("@/components/spend/PayWall"));
+const GlobalSearchModal = lazy(
+  () => import("@/components/search/GlobalSearchModal"),
+);
 
 const Index = () => {
   const dbState = useDbContext();
@@ -39,6 +42,12 @@ const Index = () => {
 
   return (
     <AppStateProvider>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:shadow-md focus:rounded-md text-sm font-medium"
+      >
+        Skip to main content
+      </a>
       <div className="h-screen flex flex-col bg-gray-50">
         <Tabs defaultValue="secrets" className="flex flex-col flex-1 min-h-0">
           <div className="border-b bg-white px-4 pt-3 flex items-center justify-between gap-4">
@@ -69,30 +78,42 @@ const Index = () => {
               remount), so switching tabs away and back must hide/show
               rather than unmount/recreate them. */
           }
-          <TabsContent
-            value="secrets"
-            forceMount
-            className="flex-1 min-h-0 mt-0 data-[state=inactive]:hidden data-[state=active]:flex"
-          >
-            <DndProvider backend={HTML5Backend}>
-              <FolderSidebar />
-              <SecretsList />
-            </DndProvider>
-          </TabsContent>
-          <TabsContent
-            value="spend"
-            forceMount
-            className="flex-1 min-h-0 mt-0 overflow-y-auto data-[state=inactive]:hidden data-[state=active]:block"
-          >
-            <PayWall>
-              <SpendTab />
-            </PayWall>
-          </TabsContent>
+          <main id="main-content" className="flex-1 flex flex-col min-h-0">
+            <TabsContent
+              value="secrets"
+              forceMount
+              className="flex-1 min-h-0 mt-0 data-[state=inactive]:hidden data-[state=active]:flex"
+            >
+              <DndProvider backend={HTML5Backend}>
+                <FolderSidebar />
+                <SecretsList />
+              </DndProvider>
+            </TabsContent>
+            <TabsContent
+              value="spend"
+              forceMount
+              className="flex-1 min-h-0 mt-0 overflow-y-auto data-[state=inactive]:hidden data-[state=active]:block"
+            >
+              <Suspense
+                fallback={
+                  <div className="p-8 text-center text-muted-foreground">
+                    Loading spend dashboard...
+                  </div>
+                }
+              >
+                <PayWall>
+                  <SpendTab />
+                </PayWall>
+              </Suspense>
+            </TabsContent>
+          </main>
         </Tabs>
-        <GlobalSearchModal
-          isOpen={isSearchOpen}
-          onClose={() => setIsSearchOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <GlobalSearchModal
+            isOpen={isSearchOpen}
+            onClose={() => setIsSearchOpen(false)}
+          />
+        </Suspense>
       </div>
     </AppStateProvider>
   );
