@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/aadilmallick/key-stash-manager#readme",
   "dependencies": {
+    "@netlify/functions": "^6.0.0",
     "express": "^5.1.0",
     "sharp": "^0.34.3",
     "zod": "^4.0.5"

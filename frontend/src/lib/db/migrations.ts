@@ -163,6 +163,15 @@ async function seedCollectionsOnce(
   collections: Collections,
   vaultKey: CryptoKey,
 ): Promise<void> {
+  // `.get()` reads whatever is currently hydrated in memory - on a fresh
+  // Collections instance (e.g. after a backgrounded tab gets discarded and
+  // reloaded by the browser, not just a true first-ever launch) the OPFS-
+  // persisted config row may not have loaded yet, making an
+  // already-seeded database look unseeded. `preload()` waits for the
+  // collection's initial sync to finish before the check runs, closing
+  // that race - without it, this reseeds from the dev mockdata fixture
+  // (import.meta.env.DEV) or an empty default profile over real data.
+  await collections.config.preload();
   const alreadySeeded = collections.config.get(CONFIG_KEYS.SEED_COMPLETE);
   if (alreadySeeded) return;
 

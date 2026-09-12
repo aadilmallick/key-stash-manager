@@ -313,7 +313,7 @@ function App() {
             <div className="relative w-[580px] sm:w-[640px] h-[360px] sm:h-[420px] mx-auto flex-none transition-transform origin-top scale-75 md:scale-100">
               {/* Decorative Tilt Cards */}
               <div className="absolute -top-4 -right-4 w-64 h-72 rounded-3xl bg-gradient-to-br from-orange-100 to-blue-100 rotate-6 shadow-xl border border-white/60 pointer-events-none" />
-              <div className="absolute bottom-6 -left-2 w-52 h-60 rounded-2xl bg-emerald-100 -rotate-6 shadow-lg border border-emerald-200/50 pointer-events-none" />
+              <div className="absolute bottom-4 -left-2 w-52 h-60 rounded-2xl bg-emerald-100 -rotate-6 shadow-lg border border-emerald-200/50 pointer-events-none" />
 
               {/* Main Card Mockup */}
               <div className="absolute top-10 left-8 sm:left-14 w-[480px] sm:w-[520px] bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden text-left">
@@ -791,7 +791,7 @@ function App() {
           </span>
         </div>
         <a
-          href="https://github.com"
+          href={constants.getGithubUrl()}
           target="_blank"
           rel="noreferrer"
           className="text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"

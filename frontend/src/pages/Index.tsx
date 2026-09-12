@@ -36,12 +36,14 @@ const Index = () => {
               <TabsTrigger value="spend">API Spend</TabsTrigger>
             </TabsList>
           </div>
-          {/* forceMount + CSS visibility instead of Radix's default
+          {
+            /* forceMount + CSS visibility instead of Radix's default
               unmount-on-inactive: FolderSidebar/SecretsList aren't designed
               to be torn down and remounted (their live-query subscriptions
               and useAppState-derived UI state don't reliably re-sync on
               remount), so switching tabs away and back must hide/show
-              rather than unmount/recreate them. */}
+              rather than unmount/recreate them. */
+          }
           <TabsContent
             value="secrets"
             forceMount
