@@ -8,7 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import SpendTab from "@/components/spend/SpendTab";
+import PayWall from "@/components/spend/PayWall";
 import GlobalSearchModal from "@/components/search/GlobalSearchModal";
+import AuthControls from "@/components/auth/AuthControls";
 import { useGlobalHotkey } from "@/hooks/useGlobalHotkey";
 
 const Index = () => {
@@ -42,18 +44,20 @@ const Index = () => {
               <TabsTrigger value="secrets">Secrets</TabsTrigger>
               <TabsTrigger value="spend">API Spend</TabsTrigger>
             </TabsList>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mb-2"
-              onClick={() => setIsSearchOpen(true)}
-            >
-              <Search className="h-4 w-4 mr-2" />
-              Search
-              <kbd className="ml-2 text-xs text-muted-foreground border rounded px-1">
-                &#8984;K
-              </kbd>
-            </Button>
+            <div className="flex items-center gap-3 mb-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsSearchOpen(true)}
+              >
+                <Search className="h-4 w-4 mr-2" />
+                Search
+                <kbd className="ml-2 text-xs text-muted-foreground border rounded px-1">
+                  &#8984;K
+                </kbd>
+              </Button>
+              <AuthControls />
+            </div>
           </div>
           {
             /* forceMount + CSS visibility instead of Radix's default
@@ -76,7 +80,9 @@ const Index = () => {
             forceMount
             className="flex-1 min-h-0 mt-0 overflow-y-auto data-[state=inactive]:hidden data-[state=active]:block"
           >
-            <SpendTab />
+            <PayWall>
+              <SpendTab />
+            </PayWall>
           </TabsContent>
         </Tabs>
         <GlobalSearchModal

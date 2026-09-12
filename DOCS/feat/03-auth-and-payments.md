@@ -1,13 +1,15 @@
 User must be authenticated in order to access features like api spend and E2E
 encryption email sending.
 
-- Add Clerk and clerk billing, pro plan id is "keystash_pro"
+- Add Clerk and clerk billing, pro plan id is "varstash_pro"
 - Paywall on api spend feature, render a `<PayWall />` component to block free
   user access, explain API spend feature, and render clerk pricing table
   component on it.
 
-1. Refer to DOCS/lib/clerk_react_setup.md for clerk setup, I already put
+1. Refer to @DOCS/lib/clerk_react_setup.md for clerk setup, I already put
    VITE_CLERK_PUBLISHABLE_KEY in the `frontend/.env`
+2. Refer to frontend/src/lib/config/env.ts and frontend/src/lib/config/config.ts
+   for accessing the config and env vars and the pro plan id
 
 # Clerk Billing for B2C SaaS
 

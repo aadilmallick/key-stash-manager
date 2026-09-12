@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
 
+// Mirrors SecretsList.tsx's truncateValue() - revealed values in the row
+// are truncated to 20 chars + "..." rather than shown in full.
+function truncateValue(value: string): string {
+  return value.substring(0, 20) + "...";
+}
+
 test.describe("secret CRUD", () => {
   test("add, reveal, edit, and delete a secret", async ({ page }) => {
     await page.goto("/");
@@ -24,7 +30,7 @@ test.describe("secret CRUD", () => {
 
     // reveal
     await row.locator("button:has(svg.lucide-eye)").click();
-    await expect(row.locator("code")).toHaveText(secretValue);
+    await expect(row.locator("code")).toHaveText(truncateValue(secretValue));
 
     // edit
     await row.getByRole("button", { name: "Edit secret" }).click();
@@ -37,7 +43,7 @@ test.describe("secret CRUD", () => {
     // behavior - the row was already revealed above), so the value should
     // already be showing in plaintext without clicking reveal again.
     const updatedRow = page.locator(".rounded-lg.p-4.shadow-sm", { hasText: secretName });
-    await expect(updatedRow.locator("code")).toHaveText(updatedValue);
+    await expect(updatedRow.locator("code")).toHaveText(truncateValue(updatedValue));
 
     // delete
     await updatedRow.locator("button:has(svg.lucide-trash2)").click();
