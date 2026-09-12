@@ -3,18 +3,8 @@ import { Secret } from "../types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Check,
-  Copy,
-  Edit,
-  Eye,
-  EyeOff,
   FileDown,
   Import,
   LucideDownload,
@@ -22,10 +12,11 @@ import {
   LucideXCircle,
   Plus,
   Search,
-  Trash2,
 } from "lucide-react";
 import SecretModal from "./SecretModal";
 import ExportSecretsModal from "./secrets/ExportSecretsModal";
+import SecretRow from "./secrets/SecretRow";
+import { computeReorderedIds } from "@/lib/reorder";
 import { useToast } from "@/components/ui/use-toast";
 import { useSync } from "@/hooks/useSync";
 import { HideDialogButton, ToggleDialogButton } from "./custom/PopoverButtons";
@@ -58,7 +49,8 @@ const SecretsList = () => {
     loading: secretsLoading,
     error: secretsError,
   } = useDecryptedSecretsForFolder(selectedFolderId);
-  const { addSecret, updateSecret, deleteSecret } = useSecretActions();
+  const { addSecret, updateSecret, deleteSecret, reorderSecretsInFolder } =
+    useSecretActions();
   const { searchTerm, setSearchTerm } = useAppState();
   const confirm = useConfirm();
   const selection = useSecretSelection();
@@ -113,6 +105,25 @@ const SecretsList = () => {
   const selectedSecretsForExport = decryptedSecrets
     .filter((s) => selection.isSelected(s.id))
     .map((s) => ({ name: s.name, value: s.value }));
+
+  // Reordering a filtered subset against the folder's true order would be
+  // confusing, so drag-based reordering only works while unfiltered.
+  const reorderingDisabled = searchTerm.trim().length > 0;
+
+  const handleReorderDrop = (
+    draggedSecretId: string,
+    targetSecretId: string,
+    dropBefore: boolean,
+  ) => {
+    const orderedIds = decryptedSecrets.map((s) => s.id);
+    const newOrder = computeReorderedIds(
+      orderedIds,
+      draggedSecretId,
+      targetSecretId,
+      dropBefore,
+    );
+    reorderSecretsInFolder(selectedFolderId, newOrder);
+  };
 
   const toggleSecretVisibility = (secretId: string) => {
     setVisibleSecrets((prev) => {
@@ -382,14 +393,6 @@ const SecretsList = () => {
     }
   }
 
-  const maskValue = (value: string) => {
-    return "*".repeat(Math.min(value.length, 20));
-  };
-
-  const truncateValue = (value: string) => {
-    return value.substring(0, 20) + "...";
-  };
-
   return (
     <TooltipProvider>
       <div className="flex-1 p-6">
@@ -538,181 +541,27 @@ const SecretsList = () => {
                       <span className="text-sm text-gray-600">Select all</span>
                     </div>
                     {filteredSecrets.map((secret) => (
-                      <div
+                      <SecretRow
                         key={secret.id}
-                        className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <Checkbox
-                            className="mt-1"
-                            checked={selection.isSelected(secret.id)}
-                            onCheckedChange={() => selection.toggle(secret.id)}
-                            aria-label={`Select ${secret.name}`}
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h3 className="font-medium text-gray-900">
-                                {secret.name}
-                              </h3>
-                            </div>
-                            {secret.description && (
-                              <div className="mb-2">
-                                <p className="text-sm text-gray-700 line-clamp-1 max-w-[60ch] text-ellipsis">
-                                  {secret.description}
-                                </p>
-                              </div>
-                            )}
-
-                            {/* secret value, toolbar */}
-                            <div className="flex items-center justify-between flex-wrap gap-2">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono flex-1 truncate">
-                                    {visibleSecrets.has(secret.id)
-                                      ? truncateValue(secret.value)
-                                      : maskValue(secret.value)}
-                                  </code>
-                                </TooltipTrigger>
-                                <TooltipContent className="max-w-[40ch] break-all">
-                                  <p>
-                                    {visibleSecrets.has(secret.id)
-                                      ? truncateValue(secret.value)
-                                      : maskValue(secret.value)}
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <div className="flex items-center gap-2">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() =>
-                                        toggleSecretVisibility(secret.id)}
-                                    >
-                                      {visibleSecrets.has(secret.id)
-                                        ? <EyeOff className="h-4 w-4" />
-                                        : <Eye className="h-4 w-4" />}
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>
-                                      {visibleSecrets.has(secret.id)
-                                        ? "Hide secret value"
-                                        : "Show secret value"}
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() =>
-                                        copyToClipboard(
-                                          secret.value,
-                                          secret.id,
-                                        )}
-                                    >
-                                      {copiedSecrets.has(secret.id)
-                                        ? <Check className="h-4 w-4" />
-                                        : <Copy className="h-4 w-4" />}
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>
-                                      {copiedSecrets.has(secret.id)
-                                        ? "Copied!"
-                                        : "Copy value only"}
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() =>
-                                        copyEnv(
-                                          secret.name,
-                                          secret.value,
-                                          secret.id,
-                                        )}
-                                    >
-                                      {copiedSecrets.has(secret.id)
-                                        ? (
-                                          <Check
-                                            className="h-4 w-4"
-                                            color="#36b328"
-                                          />
-                                        )
-                                        : (
-                                          <Copy
-                                            className="h-4 w-4"
-                                            color="#36b328"
-                                          />
-                                        )}
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>
-                                      {copiedSecrets.has(secret.id)
-                                        ? "Copied!"
-                                        : "Copy as env variable (NAME=value)"}
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      aria-label="Edit secret"
-                                      onClick={() => {
-                                        setEditingSecret(secret);
-                                        setIsModalOpen(true);
-                                      }}
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Edit secret</p>
-                                  </TooltipContent>
-                                </Tooltip>
-
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() =>
-                                        handleDeleteSecret(secret.id)}
-                                      className="text-red-600 hover:text-red-700"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Delete secret</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                            </div>
-
-                            <p className="text-xs text-gray-500 mt-2">
-                              Created:{" "}
-                              {new Date(secret.createdAt).toLocaleDateString()}
-                              {" "}
-                              • Updated:{" "}
-                              {new Date(secret.updatedAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+                        secret={secret}
+                        isSelected={selection.isSelected(secret.id)}
+                        onToggleSelect={() => selection.toggle(secret.id)}
+                        isVisible={visibleSecrets.has(secret.id)}
+                        onToggleVisibility={() =>
+                          toggleSecretVisibility(secret.id)}
+                        isCopied={copiedSecrets.has(secret.id)}
+                        onCopyValue={() =>
+                          copyToClipboard(secret.value, secret.id)}
+                        onCopyEnv={() =>
+                          copyEnv(secret.name, secret.value, secret.id)}
+                        onEdit={() => {
+                          setEditingSecret(secret);
+                          setIsModalOpen(true);
+                        }}
+                        onDelete={() => handleDeleteSecret(secret.id)}
+                        reorderingDisabled={reorderingDisabled}
+                        onReorderDrop={handleReorderDrop}
+                      />
                     ))}
                   </>
                 )}

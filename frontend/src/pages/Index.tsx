@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import FolderSidebar from "../components/FolderSidebar";
 import SecretsList from "../components/SecretsList";
 import { useSync } from "@/hooks/useSync";
@@ -72,8 +74,10 @@ const Index = () => {
             forceMount
             className="flex-1 min-h-0 mt-0 data-[state=inactive]:hidden data-[state=active]:flex"
           >
-            <FolderSidebar />
-            <SecretsList />
+            <DndProvider backend={HTML5Backend}>
+              <FolderSidebar />
+              <SecretsList />
+            </DndProvider>
           </TabsContent>
           <TabsContent
             value="spend"

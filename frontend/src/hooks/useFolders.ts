@@ -115,5 +115,19 @@ export function useFolderActions() {
     });
   };
 
-  return { addFolder, deleteFolder, renameFolder };
+  // Rewrites every folder's `order` to match its index in the given list -
+  // used after a drag-and-drop reorder, where the caller has already
+  // computed the full new ordering via computeReorderedIds(). Uses the
+  // batch form of update() (one transaction for every key) rather than a
+  // loop of single-key updates - looping individual updates here raced
+  // against the OPFS persistence layer often enough to lose writes.
+  const reorderFolders = (orderedFolderIds: string[]) => {
+    collections.folders.update(orderedFolderIds, (drafts) => {
+      drafts.forEach((draft, index) => {
+        draft.order = index;
+      });
+    });
+  };
+
+  return { addFolder, deleteFolder, renameFolder, reorderFolders };
 }

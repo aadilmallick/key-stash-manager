@@ -132,5 +132,73 @@ export function useSecretActions() {
     collections.secrets.delete([secretId]);
   };
 
-  return { addSecret, updateSecret, deleteSecret };
+  // Rewrites every secret's `order` within one folder to match its index in
+  // the given list - used after a drag-and-drop reorder, where the caller
+  // has already computed the full new ordering via computeReorderedIds().
+  // Uses the batch form of update() (one transaction for every key) rather
+  // than a loop of single-key updates - see reorderFolders() in
+  // useFolders.ts for why that loop form isn't safe here.
+  const reorderSecretsInFolder = (
+    folderId: string,
+    orderedSecretIds: string[],
+  ) => {
+    if (orderedSecretIds.length === 0) return;
+    collections.secrets.update(orderedSecretIds, (drafts) => {
+      drafts.forEach((draft, index) => {
+        draft.order = index;
+      });
+    });
+  };
+
+  // Pure lookup, no mutation: does targetFolderId already contain a secret
+  // with the same name as secretId? Names aren't encrypted (only `value`
+  // is), so this reads plaintext directly off the collection - same
+  // comparison importEnvFile() already uses for its own dedupe check.
+  const findDuplicateInFolder = (
+    secretId: string,
+    targetFolderId: string,
+  ): SecretRow | undefined => {
+    const secret = collections.secrets.get(secretId) as SecretRow | undefined;
+    if (!secret) return undefined;
+    return (collections.secrets.toArray as unknown as SecretRow[]).find(
+      (s) =>
+        s.folderId === targetFolderId &&
+        s.id !== secretId &&
+        s.name === secret.name,
+    );
+  };
+
+  // Moves a secret into targetFolderId, appended after that folder's
+  // existing secrets. If overwriteId is given, that secret is deleted
+  // first - the caller is responsible for having confirmed this with the
+  // user (see FolderSidebar.tsx's drop handler); this function itself
+  // never prompts.
+  const moveSecretToFolder = (
+    secretId: string,
+    targetFolderId: string,
+    overwriteId?: string,
+  ) => {
+    if (overwriteId) collections.secrets.delete([overwriteId]);
+    const siblings = (
+      collections.secrets.toArray as unknown as SecretRow[]
+    ).filter((s) => s.folderId === targetFolderId && s.id !== secretId);
+    const nextOrder =
+      siblings.length > 0
+        ? Math.max(...siblings.map((s) => s.order ?? 0)) + 1
+        : 0;
+    collections.secrets.update(secretId, (draft) => {
+      draft.folderId = targetFolderId;
+      draft.order = nextOrder;
+      draft.updatedAt = new Date().toISOString();
+    });
+  };
+
+  return {
+    addSecret,
+    updateSecret,
+    deleteSecret,
+    reorderSecretsInFolder,
+    findDuplicateInFolder,
+    moveSecretToFolder,
+  };
 }
