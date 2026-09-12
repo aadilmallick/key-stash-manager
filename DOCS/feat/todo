@@ -1,0 +1,7 @@
+## UI Todos
+
+Make the UX feel seamless
+
+- [ ] Make UX for search better
+    - [ ] Add shift + click and ctrl + click for easier checkbox selection
+    - [ ] Make key name be `<label />` for checkbox for easy selection

@@ -9,6 +9,15 @@ export function useSelectedFolderId() {
   return useConfigValue(CONFIG_KEYS.SELECTED_FOLDER_ID, "default");
 }
 
+// Every folder across every profile, unscoped - used by the global search
+// modal's folder-scoping picker, which (unlike the sidebar) isn't limited to
+// the current profile.
+export function useAllFolders(): FolderRow[] {
+  const { collections } = useDbCollections();
+  const { data } = useLiveQuery((q) => q.from({ folders: collections.folders }));
+  return (data ?? []) as unknown as FolderRow[];
+}
+
 export function useFoldersForProfile(profileId: string | undefined) {
   const { collections } = useDbCollections();
   const { data } = useLiveQuery((q) =>

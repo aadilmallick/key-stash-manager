@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Secret } from "../types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Tooltip,
   TooltipContent,
@@ -9,20 +10,22 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  Check,
+  Copy,
+  Edit,
   Eye,
   EyeOff,
-  Edit,
-  Trash2,
-  Plus,
-  Search,
-  Copy,
-  Check,
+  FileDown,
   Import,
-  LucideXCircle,
   LucideDownload,
   LucideFolder,
+  LucideXCircle,
+  Plus,
+  Search,
+  Trash2,
 } from "lucide-react";
 import SecretModal from "./SecretModal";
+import ExportSecretsModal from "./secrets/ExportSecretsModal";
 import { useToast } from "@/components/ui/use-toast";
 import { useSync } from "@/hooks/useSync";
 import { HideDialogButton, ToggleDialogButton } from "./custom/PopoverButtons";
@@ -30,9 +33,13 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { useCurrentProfile } from "@/hooks/useProfiles";
 import { useFoldersForProfile, useSelectedFolderId } from "@/hooks/useFolders";
-import { useDecryptedSecretsForFolder, useSecretActions } from "@/hooks/useSecrets";
+import {
+  useDecryptedSecretsForFolder,
+  useSecretActions,
+} from "@/hooks/useSecrets";
 import { useAppState } from "@/hooks/useAppState";
 import { useConfirm } from "@/hooks/useConfirm";
+import { useSecretSelection } from "@/hooks/useSecretSelection";
 import { useDbCollections } from "@/hooks/useDb";
 import {
   exportAllProfilesFile,
@@ -54,8 +61,10 @@ const SecretsList = () => {
   const { addSecret, updateSecret, deleteSecret } = useSecretActions();
   const { searchTerm, setSearchTerm } = useAppState();
   const confirm = useConfirm();
+  const selection = useSecretSelection();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [editingSecret, setEditingSecret] = useState<Secret | undefined>();
   const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set());
   const [copiedSecrets, setCopiedSecrets] = useState<Set<string>>(new Set());
@@ -66,8 +75,9 @@ const SecretsList = () => {
     stopSyncLoading,
     saveChangesToServer,
   } = useSync();
-  const [importEnvFileContents, setImportEnvFileContents] =
-    useState<string>("");
+  const [importEnvFileContents, setImportEnvFileContents] = useState<string>(
+    "",
+  );
   const [encryptedShareFile, setEncryptedShareFile] = useState<File | null>(
     null,
   );
@@ -83,6 +93,26 @@ const SecretsList = () => {
       (secret.description && secret.description.toLowerCase().includes(term))
     );
   });
+
+  // Selection is scoped to whatever's currently visible - stale ids from a
+  // previous folder/search shouldn't silently carry over.
+  useEffect(() => {
+    selection.clear();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFolderId]);
+
+  const selectedVisibleCount =
+    filteredSecrets.filter((s) => selection.isSelected(s.id)).length;
+  const selectAllState: boolean | "indeterminate" =
+    filteredSecrets.length === 0 || selectedVisibleCount === 0
+      ? false
+      : selectedVisibleCount === filteredSecrets.length
+      ? true
+      : "indeterminate";
+
+  const selectedSecretsForExport = decryptedSecrets
+    .filter((s) => selection.isSelected(s.id))
+    .map((s) => ({ name: s.name, value: s.value }));
 
   const toggleSecretVisibility = (secretId: string) => {
     setVisibleSecrets((prev) => {
@@ -356,21 +386,25 @@ const SecretsList = () => {
     return "*".repeat(Math.min(value.length, 20));
   };
 
+  const truncateValue = (value: string) => {
+    return value.substring(0, 20) + "...";
+  };
+
   return (
     <TooltipProvider>
       <div className="flex-1 p-6">
         <div className="mb-6">
+          <div className="mb-2">
+            <h1 className="text-2xl font-bold text-gray-900">
+              {selectedFolder?.name || "Secrets"}
+            </h1>
+            {currentProfile && (
+              <p className="text-sm text-gray-600">
+                Profile: {currentProfile.name}
+              </p>
+            )}
+          </div>
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {selectedFolder?.name || "Secrets"}
-              </h1>
-              {currentProfile && (
-                <p className="text-sm text-gray-600">
-                  Profile: {currentProfile.name}
-                </p>
-              )}
-            </div>
             <div className="flex gap-2 flex-wrap">
               <ToggleDialogButton
                 dialogid="import-modal"
@@ -416,6 +450,16 @@ const SecretsList = () => {
                 <Plus className="h-4 w-4 mr-2" />
                 Add Secret
               </Button>
+              {selection.selectedIds.size > 0 && (
+                <Button
+                  variant="default"
+                  className="bg-indigo-600 hover:bg-indigo-700 cursor-pointer"
+                  onClick={() => setIsExportModalOpen(true)}
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export Selected ({selection.selectedIds.size})
+                </Button>
+              )}
             </div>
           </div>
 
@@ -432,192 +476,248 @@ const SecretsList = () => {
           </div>
         </div>
 
-        {secretsError ? (
-          <div className="flex items-center justify-center h-full w-full min-h-[300px] text-center px-4">
-            <p className="text-red-600">
-              Failed to decrypt secrets in this folder. Try switching folders
-              and back, or reload the page.
-            </p>
-          </div>
-        ) : isSyncing || secretsLoading ? (
-          <div className="flex items-center justify-center h-full w-full min-h-[300px]">
-            <svg
-              className="animate-spin h-12 w-12 text-gray-500"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v8z"
-              ></path>
-            </svg>
-          </div>
-        ) : (
-          <div className="space-y-4 max-h-[60vh] overflow-y-scroll pb-8">
-            {filteredSecrets.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                {decryptedSecrets.length === 0 ? (
-                  <p>No secrets in this folder. Add your first secret!</p>
-                ) : (
-                  <p>No secrets match your search criteria.</p>
-                )}
-              </div>
-            ) : (
-              filteredSecrets.map((secret) => (
-                <div
-                  key={secret.id}
-                  className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+        {secretsError
+          ? (
+            <div className="flex items-center justify-center h-full w-full min-h-[300px] text-center px-4">
+              <p className="text-red-600">
+                Failed to decrypt secrets in this folder. Try switching folders
+                and back, or reload the page.
+              </p>
+            </div>
+          )
+          : isSyncing || secretsLoading
+          ? (
+            <div className="flex items-center justify-center h-full w-full min-h-[300px]">
+              <svg
+                className="animate-spin h-12 w-12 text-gray-500"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-medium text-gray-900">{secret.name}</h3>
-                      </div>
-                      {secret.description && (
-                        <div className="mb-2">
-                          <p className="text-sm text-gray-700 line-clamp-1 max-w-[60ch] text-ellipsis">
-                            {secret.description}
-                          </p>
-                        </div>
-                      )}
-                      <div className="flex items-center flex-wrap gap-2">
-                        <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono flex-1 min-w-[12rem] text-ellipsis">
-                          {visibleSecrets.has(secret.id)
-                            ? secret.value
-                            : maskValue(secret.value)}
-                        </code>
-                        <div className="flex items-center gap-2">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => toggleSecretVisibility(secret.id)}
-                              >
-                                {visibleSecrets.has(secret.id) ? (
-                                  <EyeOff className="h-4 w-4" />
-                                ) : (
-                                  <Eye className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>
-                                {visibleSecrets.has(secret.id)
-                                  ? "Hide secret value"
-                                  : "Show secret value"}
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  copyToClipboard(secret.value, secret.id)
-                                }
-                              >
-                                {copiedSecrets.has(secret.id) ? (
-                                  <Check className="h-4 w-4" />
-                                ) : (
-                                  <Copy className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>
-                                {copiedSecrets.has(secret.id)
-                                  ? "Copied!"
-                                  : "Copy value only"}
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  copyEnv(secret.name, secret.value, secret.id)
-                                }
-                              >
-                                {copiedSecrets.has(secret.id) ? (
-                                  <Check className="h-4 w-4" color="#36b328" />
-                                ) : (
-                                  <Copy className="h-4 w-4" color="#36b328" />
-                                )}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>
-                                {copiedSecrets.has(secret.id)
-                                  ? "Copied!"
-                                  : "Copy as env variable (NAME=value)"}
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                aria-label="Edit secret"
-                                onClick={() => {
-                                  setEditingSecret(secret);
-                                  setIsModalOpen(true);
-                                }}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Edit secret</p>
-                            </TooltipContent>
-                          </Tooltip>
-
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteSecret(secret.id)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Delete secret</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </div>
-
-                      <p className="text-xs text-gray-500 mt-2">
-                        Created: {new Date(secret.createdAt).toLocaleDateString()} •
-                        Updated: {new Date(secret.updatedAt).toLocaleDateString()}
-                      </p>
-                    </div>
+                </circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8z"
+                >
+                </path>
+              </svg>
+            </div>
+          )
+          : (
+            <div className="space-y-4 max-h-[60vh] overflow-y-scroll pb-8 styled-scrollbar">
+              {filteredSecrets.length === 0
+                ? (
+                  <div className="text-center py-12 text-gray-500">
+                    {decryptedSecrets.length === 0
+                      ? <p>No secrets in this folder. Add your first secret!</p>
+                      : <p>No secrets match your search criteria.</p>}
                   </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
+                )
+                : (
+                  <>
+                    <div className="flex items-center gap-2 px-1">
+                      <Checkbox
+                        checked={selectAllState}
+                        onCheckedChange={(checked) =>
+                          checked
+                            ? selection.selectAll(
+                              filteredSecrets.map((s) => s.id),
+                            )
+                            : selection.clear()}
+                        aria-label="Select all secrets"
+                      />
+                      <span className="text-sm text-gray-600">Select all</span>
+                    </div>
+                    {filteredSecrets.map((secret) => (
+                      <div
+                        key={secret.id}
+                        className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <Checkbox
+                            className="mt-1"
+                            checked={selection.isSelected(secret.id)}
+                            onCheckedChange={() => selection.toggle(secret.id)}
+                            aria-label={`Select ${secret.name}`}
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="font-medium text-gray-900">
+                                {secret.name}
+                              </h3>
+                            </div>
+                            {secret.description && (
+                              <div className="mb-2">
+                                <p className="text-sm text-gray-700 line-clamp-1 max-w-[60ch] text-ellipsis">
+                                  {secret.description}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* secret value, toolbar */}
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono flex-1 truncate">
+                                    {visibleSecrets.has(secret.id)
+                                      ? truncateValue(secret.value)
+                                      : maskValue(secret.value)}
+                                  </code>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-[40ch] break-all">
+                                  <p>
+                                    {visibleSecrets.has(secret.id)
+                                      ? truncateValue(secret.value)
+                                      : maskValue(secret.value)}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <div className="flex items-center gap-2">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        toggleSecretVisibility(secret.id)}
+                                    >
+                                      {visibleSecrets.has(secret.id)
+                                        ? <EyeOff className="h-4 w-4" />
+                                        : <Eye className="h-4 w-4" />}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      {visibleSecrets.has(secret.id)
+                                        ? "Hide secret value"
+                                        : "Show secret value"}
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        copyToClipboard(
+                                          secret.value,
+                                          secret.id,
+                                        )}
+                                    >
+                                      {copiedSecrets.has(secret.id)
+                                        ? <Check className="h-4 w-4" />
+                                        : <Copy className="h-4 w-4" />}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      {copiedSecrets.has(secret.id)
+                                        ? "Copied!"
+                                        : "Copy value only"}
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        copyEnv(
+                                          secret.name,
+                                          secret.value,
+                                          secret.id,
+                                        )}
+                                    >
+                                      {copiedSecrets.has(secret.id)
+                                        ? (
+                                          <Check
+                                            className="h-4 w-4"
+                                            color="#36b328"
+                                          />
+                                        )
+                                        : (
+                                          <Copy
+                                            className="h-4 w-4"
+                                            color="#36b328"
+                                          />
+                                        )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      {copiedSecrets.has(secret.id)
+                                        ? "Copied!"
+                                        : "Copy as env variable (NAME=value)"}
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      aria-label="Edit secret"
+                                      onClick={() => {
+                                        setEditingSecret(secret);
+                                        setIsModalOpen(true);
+                                      }}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Edit secret</p>
+                                  </TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        handleDeleteSecret(secret.id)}
+                                      className="text-red-600 hover:text-red-700"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Delete secret</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </div>
+
+                            <p className="text-xs text-gray-500 mt-2">
+                              Created:{" "}
+                              {new Date(secret.createdAt).toLocaleDateString()}
+                              {" "}
+                              • Updated:{" "}
+                              {new Date(secret.updatedAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+            </div>
+          )}
 
         {/* for importing all secrets*/}
 
@@ -635,9 +735,9 @@ const SecretsList = () => {
             <LucideXCircle color="red" className="w-8 h-8" />
           </HideDialogButton>
           <p className="text-sm text-muted-foreground">
-            You can override all current secrets and folders by importing a
-            JSON file (one that's exported from this website). Drag a file
-            into the file selector to get started.
+            You can override all current secrets and folders by importing a JSON
+            file (one that's exported from this website). Drag a file into the
+            file selector to get started.
           </p>
           <p className="text-red-400 text-sm mb-4">
             Caution: this will override all current data, which is
@@ -715,8 +815,7 @@ const SecretsList = () => {
             <Button
               variant="destructive"
               className="w-full"
-              disabled={
-                !encryptedShareFile ||
+              disabled={!encryptedShareFile ||
                 !encryptedShareToken.trim() ||
                 isImportingShare}
               onClick={importEncryptedShareFile}
@@ -806,6 +905,12 @@ const SecretsList = () => {
           }}
           secret={editingSecret}
           onSave={handleSaveSecret}
+        />
+
+        <ExportSecretsModal
+          isOpen={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          secrets={selectedSecretsForExport}
         />
       </div>
     </TooltipProvider>

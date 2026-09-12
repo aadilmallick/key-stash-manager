@@ -28,6 +28,8 @@ profiles.
 
 #### High priority functional requirements
 
+Add react DnD for this:
+
 - User can drag folders around and rearrange them within a profile
 - User can drag secrets around and rearrange them within folders and across
   folders (drag them into folders to put the secret in there, overriding
@@ -56,6 +58,11 @@ that says "export" that the user can click to export the selected secrets.
 export SECRET=VALUE
 ```
 
+> Tip from Coderabbit: Specify shell-safe export serialization. Export values
+> containing spaces, quotes, newlines, #, or backslashes may not round-trip and
+> may be interpreted by a shell when sourced. Require key-name validation,
+> parser-compatible quoting and escaping, and round-trip tests for both formats.
+
 3. For both options, add a "masking" feature where by default the secrets
    contents in the textarea is masked with asterisks, but you can unmask it by
    clicking on the eye icon.
@@ -75,6 +82,8 @@ ctrl + K shortcut to focus on global search bar.
 - Using previous feature of checkboxes, user can select secrets from the search
   result list and then click an "export search" button to bring up the export
   modal.
+
+The default keyboard shortcut should be CTRL + K or CMD + K
 
 ### 2nd core loop: API spend
 

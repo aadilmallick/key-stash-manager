@@ -65,6 +65,24 @@ export function useDecryptedSecretsForFolder(folderId: string | undefined): {
   return { secrets: decrypted, loading, error };
 }
 
+// On-demand decryption of a single secret's value by id, for UI that can't
+// afford to eagerly decrypt every secret in scope (e.g. global search
+// results, where only an explicitly-unmasked row's value should ever touch
+// crypto.subtle). Returns null if the id no longer exists.
+export function useSecretValueDecryptor(): {
+  decryptSecretValue: (secretId: string) => Promise<string | null>;
+} {
+  const { collections, vaultKey } = useDbCollections();
+
+  const decryptSecretValue = async (secretId: string): Promise<string | null> => {
+    const row = collections.secrets.get(secretId) as SecretRow | undefined;
+    if (!row) return null;
+    return decryptValue(row.value, vaultKey);
+  };
+
+  return { decryptSecretValue };
+}
+
 export function useSecretActions() {
   const { collections, vaultKey } = useDbCollections();
 

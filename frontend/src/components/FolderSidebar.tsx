@@ -144,7 +144,10 @@ const FolderSidebar = () => {
         </Dialog>
       </div>
 
-      <div className="space-y-1 overflow-y-auto max-h-[60vh]" role="list">
+      <div
+        className="space-y-1 overflow-y-scroll max-h-[60vh] styled-scrollbar"
+        role="list"
+      >
         {folders.map((folder) => (
           <div
             key={folder.id}
