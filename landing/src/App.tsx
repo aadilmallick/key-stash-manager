@@ -128,11 +128,35 @@ function App() {
   const faqData = [
     {
       q: `How is ${constants.appName} different from Doppler or Infisical?`,
-      a: `${constants.appName} is built for solo builders and small teams, not platform engineering orgs. Doppler and Infisical are built for teams running infrastructure at scale, with CLIs, RBAC, and server-side sync. ${constants.appName} is local-first and visual: no terminal, no server, no seats to manage.`,
+      a: `Doppler and Infisical are enterprise-grade secret managers engineered for DevOps teams with complex infrastructure, centralized RBAC policies, and terminal CLIs. ${constants.appName} is designed specifically for solo builders, AI engineers, and lean product teams who want an intuitive visual UI, local-first client-side encryption, and instant copy/paste without configuring cloud daemons or managing seat licenses.`,
     },
     {
-      q: `Can ${constants.appName} read or store my API keys?`,
-      a: `No. Your keys are encrypted client-side and stored in your browser's IndexedDB. ${constants.appName} has no server component that touches your secrets — we can't read them, and neither can anyone else.`,
+      q: `Can ${constants.appName} read, log, or store my API keys on your servers?`,
+      a: `Never. All secrets and environment variables are encrypted client-side in your browser using the standard Web Crypto API (AES-GCM 256-bit encryption) before being persisted to your browser's IndexedDB. Our servers operate on a zero-knowledge architecture—we never possess your decryption keys and have no ability to read your secrets.`,
+    },
+    {
+      q: `How does live API spend tracking work without leaking my keys?`,
+      a: `${constants.appName} securely polls provider billing and usage endpoints (such as OpenAI, Anthropic, and OpenRouter) directly from your client using authenticated read-only balance requests. Your API keys are kept in your local browser sandbox and never relayed through third-party proxy servers.`,
+    },
+    {
+      q: `What export and import formats are supported?`,
+      a: `You can import existing secrets by pasting raw key-value pairs or dragging and dropping your .env, .env.local, or JSON configuration files. Exporting is just as simple: generate ready-to-use .env files, formatted JSON payloads, or single-line shell export commands for your terminal with one click.`,
+    },
+    {
+      q: `What is included in the Free plan versus the Pro plan?`,
+      a: `The Free tier is free forever and includes unlimited local key storage, visual project profiles, folder categorization, and manual .env exports. The Pro tier ($10/month) is designed for active AI developers needing live multi-provider spend dashboards, spending cap threshold notifications, TouchID / WebAuthn passkey vault protection, and automated magic-link email handoffs.`,
+    },
+    {
+      q: `How does the TouchID / WebAuthn vault lock protect my workstation?`,
+      a: `When enabled, ${constants.appName} interfaces with your operating system's hardware security enclave via standard WebAuthn. This requires biometric verification (Touch ID, Face ID, or Windows Hello) before decrypting your credentials, ensuring unauthorized individuals cannot inspect your keys even if your laptop is left unattended.`,
+    },
+    {
+      q: `How can I safely hand off secrets to contractors or teammates?`,
+      a: `Instead of pasting sensitive production keys into Slack, Discord, or plaintext email threads, ${constants.appName} enables secure handoffs. You can generate encrypted magic-link bundles protected with ephemeral verification tokens, ensuring only intended recipients can decrypt the environment payload.`,
+    },
+    {
+      q: `Is ${constants.appName} open source and self-hostable?`,
+      a: `Yes. The core application is open-source under the MIT license and can be inspected on GitHub. You can run it entirely offline as a local web application, or deploy it into your private cloud using Docker and our lightweight Express backend.`,
     },
   ];
 
@@ -146,6 +170,14 @@ function App() {
 
   return (
     <div className="bg-slate-50 text-slate-900 min-h-screen font-sans selection:bg-orange-500 selection:text-white">
+      {/* Skip to Content Link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-orange-600 focus:text-white focus:rounded-lg focus:shadow-lg focus:font-semibold"
+      >
+        Skip to main content
+      </a>
+
       {/* HEADER */}
       <header className="sticky top-0 z-50 w-full bg-slate-50/90 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
@@ -159,7 +191,7 @@ function App() {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden md:flex items-center gap-8" aria-label="Main Navigation">
             {navLinks.map((link) => (
               <a
                 key={link.href}
@@ -193,12 +225,14 @@ function App() {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2 text-slate-600 hover:text-slate-900 focus:outline-none"
             aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
           >
             <svg
               className="w-6 h-6"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               {mobileMenuOpen
                 ? (
@@ -256,7 +290,9 @@ function App() {
         )}
       </header>
 
-      {/* HERO SECTION */}
+      {/* MAIN CONTENT LANDMARK */}
+      <main id="main-content">
+        {/* HERO SECTION */}
       <section className="relative min-h-[85vh] overflow-hidden flex flex-col items-center justify-start text-center pt-16 sm:pt-24 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] sm:w-[900px] h-[400px] sm:h-[500px] bg-gradient-to-b from-orange-500/10 via-orange-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
 
@@ -425,6 +461,7 @@ function App() {
                 </span>
                 <button
                   type="button"
+                  aria-label="Add folder"
                   className="w-5 h-5 rounded border border-slate-300 text-slate-500 text-xs flex items-center justify-center hover:bg-slate-100"
                 >
                   +
@@ -581,7 +618,7 @@ function App() {
         </h2>
 
         {/* ASCII Art Wrapper */}
-        <div className="kt-ascii-wrap will-change-transform scale-75 md:scale-100">
+        <div className="kt-ascii-wrap will-change-transform scale-75 md:scale-100" aria-hidden="true">
           <div className="kt-ascii-w2">
             <pre className="kt-ascii-text">
 {`                    @@@@@@@@@
@@ -758,11 +795,15 @@ function App() {
             >
               <button
                 type="button"
+                id={`faq-btn-${idx}`}
+                aria-expanded={item.isOpen}
+                aria-controls={`faq-answer-${idx}`}
                 onClick={() => item.onToggle()}
                 className="w-full flex justify-between items-center p-5 text-left font-semibold text-slate-900 hover:bg-slate-50/50 transition-colors"
               >
                 <span className="text-base sm:text-lg">{item.q}</span>
                 <span
+                  aria-hidden="true"
                   className={`text-xl text-slate-400 transition-transform duration-200 ${
                     item.isOpen ? "rotate-180" : "rotate-0"
                   }`}
@@ -771,7 +812,12 @@ function App() {
                 </span>
               </button>
               {item.isOpen && (
-                <div className="px-5 pb-5 text-sm sm:text-base text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
+                <div
+                  id={`faq-answer-${idx}`}
+                  role="region"
+                  aria-labelledby={`faq-btn-${idx}`}
+                  className="px-5 pb-5 text-sm sm:text-base text-slate-600 leading-relaxed border-t border-slate-100 pt-3"
+                >
                   {item.a}
                 </div>
               )}
@@ -779,6 +825,7 @@ function App() {
           ))}
         </div>
       </section>
+      </main>
 
       {/* FOOTER */}
       <footer className="py-8 px-4 sm:px-8 lg:px-12 border-t border-slate-200 max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">

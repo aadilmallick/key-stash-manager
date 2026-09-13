@@ -1,0 +1,21 @@
+# VarStash
+
+> VarStash is a local-first, visual API key and secret manager with real-time multi-provider AI spend monitoring. Built for solo developers, indie hackers, and small teams who want simple secret management without DevOps complexity.
+
+## Key Information
+- **Product Name:** VarStash
+- **Website:** https://varstash.com
+- **Repository:** https://github.com/aadilmallick/key-stash-manager
+- **License:** Open Source (MIT) / Commercial Hosted
+
+## Core Architecture & Security Model
+- **Local-First & Client-Side Encrypted:** Secrets are encrypted client-side using Web Crypto API (AES-GCM 256-bit). Stored securely in browser IndexedDB.
+- **Zero-Knowledge Cloud:** VarStash servers cannot read, decrypt, or log your secrets.
+- **Biometric Passkey Vault:** Optional hardware-backed TouchID / WebAuthn passkey unlock for local workstations.
+- **Live API Spend Tracking:** Tracks live usage, credit balances, and spending cap alerts across OpenAI, Anthropic, and OpenRouter directly from the client.
+- **Secure Handoffs:** Magic-link email handoffs with ephemeral decryption tokens for sharing environment bundles without Slack or email leaks.
+- **Formats Supported:** Export and import `.env`, `.env.local`, JSON, and Docker environment formats.
+
+## Pricing
+- **Free Tier ($0/month):** Unlimited local secret storage, visual profiles and folders, manual export, client-side encryption. Free forever.
+- **Pro Tier ($10/month):** Real-time API spend monitoring, spending cap alerts, TouchID/WebAuthn passkey vault lock, and automated magic-link email handoffs.

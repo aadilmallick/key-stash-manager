@@ -2,18 +2,209 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>landing</title>
+    
+    <!-- Primary Page Metadata -->
+    <title>VarStash — Visual Secret &amp; API Key Manager | Local-First &amp; Encrypted</title>
+    <meta
+      name="description"
+      content="Local-first, client-side encrypted API key and secrets manager with real-time multi-provider spend tracking (OpenAI, Anthropic, OpenRouter). Zero CLI setup, zero server access, free forever for local storage."
+    />
+    <meta
+      name="keywords"
+      content="API key manager, secret manager, local-first credentials, environment variables, .env manager, API spend tracking, OpenAI spend monitor, Anthropic spend tracker, Web Crypto AES-GCM, passkey vault"
+    />
+    <meta name="author" content="VarStash" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <link rel="canonical" href="https://varstash.com/" />
+
+    <!-- Favicons & App Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="application-name" content="VarStash" />
+    <meta name="apple-mobile-web-app-title" content="VarStash" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:site_name" content="VarStash" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://varstash.com/" />
+    <meta property="og:title" content="VarStash — Visual Secret &amp; API Key Manager" />
+    <meta
+      property="og:description"
+      content="Manage environment variables visually with zero DevOps complexity. 100% client-side encrypted in IndexedDB with real-time AI spend monitoring."
+    />
+    <meta property="og:image" content="https://varstash.com/og-image.png" />
+    <meta property="og:image:secure_url" content="https://varstash.com/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="669" />
+    <meta property="og:image:alt" content="VarStash - Visual API Key and Secret Manager dashboard preview with live spend tracking" />
+
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://varstash.com/" />
+    <meta name="twitter:title" content="VarStash — Visual Secret &amp; API Key Manager" />
+    <meta
+      name="twitter:description"
+      content="Manage environment variables visually with zero DevOps complexity. 100% client-side encrypted with real-time AI spend tracking."
+    />
+    <meta name="twitter:image" content="https://varstash.com/og-image.png" />
+    <meta name="twitter:image:alt" content="VarStash - Visual API Key and Secret Manager dashboard preview" />
+
+    <!-- Preconnect & Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <style lang="text/css">
+
+    <!-- Schema.org JSON-LD (SEO & AEO Graph) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://varstash.com/#organization",
+          "name": "VarStash",
+          "url": "https://varstash.com",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://varstash.com/icon-512.png",
+            "width": 512,
+            "height": 512
+          },
+          "sameAs": [
+            "https://github.com/aadilmallick/key-stash-manager"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://varstash.com/#website",
+          "url": "https://varstash.com",
+          "name": "VarStash",
+          "publisher": {
+            "@id": "https://varstash.com/#organization"
+          }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://varstash.com/#software",
+          "name": "VarStash",
+          "applicationCategory": "DeveloperApplication, SecurityApplication",
+          "operatingSystem": "Web, macOS, Linux, Windows",
+          "description": "Visual secret and API key manager with client-side Web Crypto encryption, local IndexedDB storage, and real-time AI spend monitoring across OpenAI, Anthropic, and OpenRouter.",
+          "offers": [
+            {
+              "@type": "Offer",
+              "name": "Free",
+              "price": "0",
+              "priceCurrency": "USD",
+              "description": "Unlimited local secrets, visual profiles & folders, manual token export, client-side encryption."
+            },
+            {
+              "@type": "Offer",
+              "name": "Pro",
+              "price": "10.00",
+              "priceCurrency": "USD",
+              "billingDuration": "P1M",
+              "description": "Real-time API spend monitoring (OpenAI, Anthropic), automated magic-link email handoffs, spending cap alerts, TouchID / WebAuthn passkey vault lock."
+            }
+          ],
+          "featureList": [
+            "Client-side AES-GCM 256-bit encryption",
+            "Local IndexedDB storage without server data transmission",
+            "Live multi-provider AI spend dashboard (OpenAI, Anthropic, OpenRouter)",
+            "TouchID / WebAuthn hardware biometric vault lock",
+            "One-click .env, .env.local, and JSON exports",
+            "Encrypted magic-link handoffs with ephemeral verification tokens"
+          ],
+          "screenshot": "https://varstash.com/og-image.png"
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://varstash.com/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "How is VarStash different from Doppler or Infisical?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Doppler and Infisical are enterprise-grade secret managers engineered for DevOps teams with complex infrastructure, centralized RBAC policies, and terminal CLIs. VarStash is designed specifically for solo builders, AI engineers, and lean product teams who want an intuitive visual UI, local-first client-side encryption, and instant copy/paste without configuring cloud daemons or managing seat licenses."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can VarStash read, log, or store my API keys on your servers?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Never. All secrets and environment variables are encrypted client-side in your browser using the standard Web Crypto API (AES-GCM 256-bit encryption) before being persisted to your browser's IndexedDB. Our servers operate on a zero-knowledge architecture—we never possess your decryption keys and have no ability to read your secrets."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How does live API spend tracking work without leaking my keys?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "VarStash securely polls provider billing and usage endpoints (such as OpenAI, Anthropic, and OpenRouter) directly from your client using authenticated read-only balance requests. Your API keys are kept in your local browser sandbox and never relayed through third-party proxy servers."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What export and import formats are supported?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "You can import existing secrets by pasting raw key-value pairs or dragging and dropping your .env, .env.local, or JSON configuration files. Exporting is just as simple: generate ready-to-use .env files, formatted JSON payloads, or single-line shell export commands for your terminal with one click."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What is included in the Free plan versus the Pro plan?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The Free tier is free forever and includes unlimited local key storage, visual project profiles, folder categorization, and manual .env exports. The Pro tier ($10/month) is designed for active AI developers needing live multi-provider spend dashboards, spending cap threshold notifications, TouchID / WebAuthn passkey vault protection, and automated magic-link email handoffs."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How does the TouchID / WebAuthn vault lock protect my workstation?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "When enabled, VarStash interfaces with your operating system's hardware security enclave via standard WebAuthn. This requires biometric verification (Touch ID, Face ID, or Windows Hello) before decrypting your credentials, ensuring unauthorized individuals cannot inspect your keys even if your laptop is left unattended."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How can I safely hand off secrets to contractors or teammates?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Instead of pasting sensitive production keys into Slack, Discord, or plaintext email threads, VarStash enables secure handoffs. You can generate encrypted magic-link bundles protected with ephemeral verification tokens, ensuring only intended recipients can decrypt the environment payload."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is VarStash open source and self-hostable?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. The core application is open-source under the MIT license and can be inspected on GitHub. You can run it entirely offline as a local web application, or deploy it into your private cloud using Docker and our lightweight Express backend."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+
+    <style>
     body {
       margin: 0;
-      font-family: 'Inter',system-ui,sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -55,10 +246,10 @@
     @keyframes kt-glow {
       0%,
       100% {
-        text-shadow: 0 0 4px currentColor,0 0 10px currentColor;
+        text-shadow: 0 0 4px currentColor, 0 0 10px currentColor;
       }
       50% {
-        text-shadow: 0 0 14px currentColor,0 0 22px currentColor;
+        text-shadow: 0 0 14px currentColor, 0 0 22px currentColor;
       }
     }
     </style>
