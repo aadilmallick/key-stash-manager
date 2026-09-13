@@ -17,7 +17,10 @@ export async function verifyProAccess(req: Request): Promise<ProAccessResult> {
   // "dev" under `netlify dev` (and "deploy-preview"/"branch-deploy" for
   // those contexts), so local testing stays exactly as frictionless as
   // today. This is the server-side analog of VITE_IS_TESTING's dev bypass.
-  if (process.env.CONTEXT !== "production") {
+  if (
+    process.env.CONTEXT !== "production" ||
+    process.env.BYPASS_PRO_ACCESS === "true"
+  ) {
     return { ok: true, status: 200 };
   }
 

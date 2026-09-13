@@ -10,14 +10,15 @@ general architecture — this doc assumes that context.
 
 KeyStash already holds the user's OpenAI/OpenRouter API keys locally —
 the whole point of the app. So instead of a backend that stores or
-proxies *secrets*, the browser fetches each provider's billing endpoint
-directly with the key the user already entered. The only reason a server
-is involved at all is that browsers can't call `api.openai.com` or
-`openrouter.ai` directly: those endpoints don't send permissive CORS
-headers, so a same-origin `fetch()` from the app would be blocked
-regardless of the key being valid. The proxy's only job is to relay that
-one request server-side and hand back the response — it never stores or
-logs anything.
+proxies *secrets* long-term, the browser sends the key straight through
+to a same-origin `/api/proxy-spend` endpoint for a single request, and
+the server-side proxy uses it to call the provider's billing endpoint on
+the browser's behalf. The only reason a server is involved at all is that
+browsers can't call `api.openai.com` or `openrouter.ai` directly: those
+endpoints don't send permissive CORS headers, so a same-origin `fetch()`
+straight from the app would be blocked regardless of the key being valid.
+The proxy's only job is to relay that one request server-side and hand
+back the response — it never stores or logs anything.
 
 ## One proxy implementation, two runtimes
 

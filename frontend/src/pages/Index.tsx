@@ -8,9 +8,10 @@ import { useDbContext } from "@/hooks/useDb";
 import { AppStateProvider } from "@/hooks/useAppState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import { HelpCircle, Search } from "lucide-react";
 import AuthControls from "@/components/auth/AuthControls";
 import { useGlobalHotkey } from "@/hooks/useGlobalHotkey";
+import HelpModal from "@/components/help/HelpModal";
 
 const SpendTab = lazy(() => import("@/components/spend/SpendTab"));
 const PayWall = lazy(() => import("@/components/spend/PayWall"));
@@ -18,10 +19,17 @@ const GlobalSearchModal = lazy(
   () => import("@/components/search/GlobalSearchModal"),
 );
 
+// If the vault genuinely fails to load (e.g. corrupted local storage), a
+// static "please reload" message just shifts the work onto the user -
+// self-heal instead, with a visible countdown so it's obvious what's
+// happening rather than the page silently reloading.
+const VAULT_ERROR_RELOAD_DELAY_MS = 3000;
+
 const Index = () => {
   const dbState = useDbContext();
   const { pullChangesFromServer } = useSync();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   useGlobalHotkey("k", () => setIsSearchOpen(true));
 
@@ -32,12 +40,32 @@ const Index = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dbState.status]);
 
+  useEffect(() => {
+    if (dbState.status !== "error") return;
+    const timer = setTimeout(
+      () => window.location.reload(),
+      VAULT_ERROR_RELOAD_DELAY_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [dbState.status]);
+
   if (dbState.status === "loading") {
     return <div>Loading vault...</div>;
   }
 
   if (dbState.status === "error") {
-    return <div>Failed to load vault. Please reload the page.</div>;
+    return (
+      <div className="h-screen flex items-center justify-center text-center px-4">
+        <div>
+          <p className="text-red-600 font-medium mb-1">
+            Something went wrong loading your vault.
+          </p>
+          <p className="text-sm text-gray-500">
+            Reloading automatically in a few seconds…
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -67,6 +95,14 @@ const Index = () => {
                   &#8984;K
                 </kbd>
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Help"
+                onClick={() => setIsHelpOpen(true)}
+              >
+                <HelpCircle className="h-4 w-4" />
+              </Button>
               <AuthControls />
             </div>
           </div>
@@ -76,7 +112,10 @@ const Index = () => {
               to be torn down and remounted (their live-query subscriptions
               and useAppState-derived UI state don't reliably re-sync on
               remount), so switching tabs away and back must hide/show
-              rather than unmount/recreate them. */
+              rather than unmount/recreate them. The spend tab below doesn't
+              have that constraint, so it uses Radix's default (mount only
+              once activated) instead - avoids mounting PayWall/SpendTab and
+              their Clerk/network dependencies before anyone opens the tab. */
           }
           <main
             id="main-content"
@@ -95,8 +134,7 @@ const Index = () => {
             </TabsContent>
             <TabsContent
               value="spend"
-              forceMount
-              className="flex-1 min-h-0 mt-0 overflow-y-auto data-[state=inactive]:hidden data-[state=active]:block"
+              className="flex-1 min-h-0 mt-0 overflow-y-auto"
             >
               <Suspense
                 fallback={
@@ -112,12 +150,15 @@ const Index = () => {
             </TabsContent>
           </main>
         </Tabs>
-        <Suspense fallback={null}>
-          <GlobalSearchModal
-            isOpen={isSearchOpen}
-            onClose={() => setIsSearchOpen(false)}
-          />
-        </Suspense>
+        {isSearchOpen && (
+          <Suspense fallback={null}>
+            <GlobalSearchModal
+              isOpen={isSearchOpen}
+              onClose={() => setIsSearchOpen(false)}
+            />
+          </Suspense>
+        )}
+        <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
       </div>
     </AppStateProvider>
   );

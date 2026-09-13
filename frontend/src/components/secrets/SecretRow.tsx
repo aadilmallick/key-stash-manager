@@ -34,7 +34,9 @@ function truncateValue(value: string): string {
 interface SecretRowProps {
   secret: DecryptedSecret;
   isSelected: boolean;
-  onToggleSelect: () => void;
+  // Receives the click's shiftKey so callers can support range-select
+  // (see useSecretSelection.handleCheckboxClick).
+  onToggleSelect: (shiftKey: boolean) => void;
   isVisible: boolean;
   onToggleVisibility: () => void;
   isCopied: boolean;
@@ -114,27 +116,30 @@ const SecretRow = ({
       <div className="flex items-start justify-between gap-3">
         <div
           ref={handleRef}
-          role="button"
-          tabIndex={0}
-          className={`mt-1 text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-400 rounded ${
+          className={`mt-1 text-gray-400 rounded ${
             reorderingDisabled
               ? "cursor-not-allowed opacity-40"
               : "cursor-grab hover:text-gray-600"
           }`}
           aria-label={`Drag to reorder ${secret.name}`}
-          onKeyDown={(e) => e.stopPropagation()}
         >
           <GripVertical className="h-4 w-4" />
         </div>
         <Checkbox
+          id={`select-secret-${secret.id}`}
           className="mt-1"
           checked={isSelected}
-          onCheckedChange={onToggleSelect}
+          onClick={(e) => onToggleSelect(e.shiftKey)}
           aria-label={`Select ${secret.name}`}
         />
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
-            <h2 className="font-medium text-gray-900 text-base">{secret.name}</h2>
+            <label
+              htmlFor={`select-secret-${secret.id}`}
+              className="font-medium text-gray-900 text-base cursor-pointer"
+            >
+              {secret.name}
+            </label>
           </div>
           {secret.description && (
             <div className="mb-2">

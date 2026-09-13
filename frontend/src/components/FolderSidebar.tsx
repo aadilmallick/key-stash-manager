@@ -137,11 +137,8 @@ const FolderRowItem = ({
       <div className="flex items-center gap-2 flex-1">
         <div
           ref={handleRef}
-          role="button"
-          tabIndex={0}
-          className="text-gray-400 cursor-grab hover:text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-400 rounded"
+          className="text-gray-400 cursor-grab hover:text-gray-600 rounded"
           onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
           aria-label={`Drag to reorder ${folder.name}`}
         >
           <GripVertical className="h-4 w-4" />

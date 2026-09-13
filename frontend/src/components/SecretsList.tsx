@@ -254,7 +254,7 @@ const SecretsList = () => {
       } else {
         toast({
           title: "Copied to clipboard",
-          description: "Copied folder as .env to clipbaord",
+          description: "Copied folder as .env to clipboard",
         });
       }
 
@@ -547,6 +547,7 @@ const SecretsList = () => {
                   <>
                     <div className="flex items-center gap-2 px-1 mb-3">
                       <Checkbox
+                        id="select-all-secrets"
                         checked={selectAllState}
                         onCheckedChange={(checked) =>
                           checked
@@ -556,7 +557,12 @@ const SecretsList = () => {
                             : selection.clear()}
                         aria-label="Select all secrets"
                       />
-                      <span className="text-sm text-gray-600">Select all</span>
+                      <label
+                        htmlFor="select-all-secrets"
+                        className="text-sm text-gray-600 cursor-pointer"
+                      >
+                        Select all
+                      </label>
                     </div>
                     <div
                       className="space-y-4 max-h-[60vh] overflow-y-scroll pb-8 styled-scrollbar"
@@ -567,7 +573,12 @@ const SecretsList = () => {
                           key={secret.id}
                           secret={secret}
                           isSelected={selection.isSelected(secret.id)}
-                          onToggleSelect={() => selection.toggle(secret.id)}
+                          onToggleSelect={(shiftKey) =>
+                            selection.handleCheckboxClick(
+                              secret.id,
+                              filteredSecrets.map((s) => s.id),
+                              shiftKey,
+                            )}
                           isVisible={visibleSecrets.has(secret.id)}
                           onToggleVisibility={() =>
                             toggleSecretVisibility(secret.id)}
@@ -601,8 +612,8 @@ const SecretsList = () => {
             <DialogHeader>
               <DialogTitle>Import JSON configuration</DialogTitle>
               <DialogDescription>
-                You can override all current secrets and folders by importing
-                a JSON file (one that's exported from this website).
+                You can override all current secrets and folders by importing a
+                JSON file (one that's exported from this website).
               </DialogDescription>
             </DialogHeader>
             <p className="text-red-400 text-sm mb-4">
@@ -708,15 +719,6 @@ const SecretsList = () => {
                 placeholder="jsonfile.txt"
                 multiple={false}
                 onChange={async (e) => {
-                  setIsImportEnvOpen(false);
-                  const shouldContinue = await confirm({
-                    title: "Import .env file",
-                    description:
-                      "Are you sure you want to import your data? This will overwrite any environment variables with the same name.",
-                    confirmLabel: "Import",
-                    variant: "destructive",
-                  });
-                  if (!shouldContinue) return;
                   const target = e.target as HTMLInputElement;
                   if (target.files && target.files.length > 0) {
                     const file = target.files[0]!;

@@ -13,10 +13,21 @@ export interface SecretSelection {
   // Tri-state for a "select all" checkbox scoped to whatever ids are
   // currently visible (a filtered/searched subset), not all of selectedIds.
   selectAllState: (visibleIds: string[]) => boolean | "indeterminate";
+  // Shift+click selects the contiguous range (within `orderedIds`) between
+  // the last-clicked id and `id`, matching common checkbox-list UX (e.g.
+  // Gmail). Plain click and Ctrl/Cmd+click both fall through to a normal
+  // single toggle - every checkbox click is already additive/non-exclusive,
+  // so Ctrl/Cmd+click doesn't need any special-case behavior of its own.
+  handleCheckboxClick: (
+    id: string,
+    orderedIds: string[],
+    shiftKey: boolean,
+  ) => void;
 }
 
 export function useSecretSelection(): SecretSelection {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [lastClickedId, setLastClickedId] = useState<string | null>(null);
 
   const toggle = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -36,7 +47,32 @@ export function useSecretSelection(): SecretSelection {
 
   const clear = useCallback(() => {
     setSelectedIds(new Set());
+    setLastClickedId(null);
   }, []);
+
+  const handleCheckboxClick = useCallback(
+    (id: string, orderedIds: string[], shiftKey: boolean) => {
+      if (shiftKey && lastClickedId && lastClickedId !== id) {
+        const fromIndex = orderedIds.indexOf(lastClickedId);
+        const toIndex = orderedIds.indexOf(id);
+        if (fromIndex !== -1 && toIndex !== -1) {
+          const [start, end] = fromIndex < toIndex
+            ? [fromIndex, toIndex]
+            : [toIndex, fromIndex];
+          setSelectedIds((prev) => {
+            const next = new Set(prev);
+            for (let i = start; i <= end; i++) next.add(orderedIds[i]);
+            return next;
+          });
+          setLastClickedId(id);
+          return;
+        }
+      }
+      toggle(id);
+      setLastClickedId(id);
+    },
+    [lastClickedId, toggle],
+  );
 
   const isSelected = useCallback(
     (id: string) => selectedIds.has(id),
@@ -55,7 +91,23 @@ export function useSecretSelection(): SecretSelection {
   );
 
   return useMemo(
-    () => ({ selectedIds, isSelected, toggle, selectAll, clear, selectAllState }),
-    [selectedIds, isSelected, toggle, selectAll, clear, selectAllState],
+    () => ({
+      selectedIds,
+      isSelected,
+      toggle,
+      selectAll,
+      clear,
+      selectAllState,
+      handleCheckboxClick,
+    }),
+    [
+      selectedIds,
+      isSelected,
+      toggle,
+      selectAll,
+      clear,
+      selectAllState,
+      handleCheckboxClick,
+    ],
   );
 }

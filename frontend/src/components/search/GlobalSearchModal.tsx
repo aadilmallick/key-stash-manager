@@ -299,13 +299,22 @@ const GlobalSearchModal = ({ isOpen, onClose }: GlobalSearchModalProps) => {
                     className="flex items-center gap-3 border rounded-lg p-3"
                   >
                     <Checkbox
+                      id={`select-search-result-${result.secretId}`}
                       checked={selection.isSelected(result.secretId)}
-                      onCheckedChange={() => selection.toggle(result.secretId)}
+                      onClick={(e) =>
+                        selection.handleCheckboxClick(
+                          result.secretId,
+                          results.map((r) => r.secretId),
+                          e.shiftKey,
+                        )}
                       aria-label={`Select ${result.name}`}
                     />
-                    <span className="font-medium text-sm flex-1 min-w-0 truncate">
+                    <label
+                      htmlFor={`select-search-result-${result.secretId}`}
+                      className="font-medium text-sm flex-1 min-w-0 truncate cursor-pointer"
+                    >
                       {result.name}
-                    </span>
+                    </label>
                     <Input
                       readOnly
                       aria-label={`${result.name} value`}
