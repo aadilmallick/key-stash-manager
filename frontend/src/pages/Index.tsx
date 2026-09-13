@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useState } from "react";
+import React, { lazy, Suspense, useEffect, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import FolderSidebar from "../components/FolderSidebar";
@@ -78,7 +78,11 @@ const Index = () => {
               remount), so switching tabs away and back must hide/show
               rather than unmount/recreate them. */
           }
-          <main id="main-content" className="flex-1 flex flex-col min-h-0">
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className="flex-1 flex flex-col min-h-0"
+          >
             <TabsContent
               value="secrets"
               forceMount

@@ -23,8 +23,12 @@ function maskValue(value: string): string {
   return "*".repeat(Math.min(value.length, 20));
 }
 
+const TRUNCATE_LENGTH = 20;
+
 function truncateValue(value: string): string {
-  return value.substring(0, 20) + "...";
+  return value.length > TRUNCATE_LENGTH
+    ? `${value.substring(0, TRUNCATE_LENGTH)}...`
+    : value;
 }
 
 interface SecretRowProps {

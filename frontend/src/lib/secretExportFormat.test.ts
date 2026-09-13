@@ -5,6 +5,7 @@ import {
   formatDotenvLine,
   formatExportLine,
   isValidSecretName,
+  partitionExportable,
 } from "./secretExportFormat";
 
 // Minimal reverse parser, only for proving formatDotenvLine/formatExportLine
@@ -117,5 +118,29 @@ describe("buildDotenvContent / buildExportContent", () => {
     expect(buildExportContent(pairs)).toBe(
       'export A=1\nexport B="two words"',
     );
+  });
+});
+
+describe("partitionExportable", () => {
+  it("splits valid-identifier names from invalid ones", () => {
+    const pairs = [
+      { name: "GOOD_KEY", value: "1" },
+      { name: "Stripe API Key", value: "2" },
+      { name: "ANOTHER_GOOD", value: "3" },
+    ];
+    const { exportable, skippedNames } = partitionExportable(pairs);
+    expect(exportable).toEqual([
+      { name: "GOOD_KEY", value: "1" },
+      { name: "ANOTHER_GOOD", value: "3" },
+    ]);
+    expect(skippedNames).toEqual(["Stripe API Key"]);
+  });
+
+  it("skips nothing when every name is valid", () => {
+    const pairs = [{ name: "A", value: "1" }];
+    expect(partitionExportable(pairs)).toEqual({
+      exportable: pairs,
+      skippedNames: [],
+    });
   });
 });

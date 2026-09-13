@@ -185,11 +185,6 @@ function validateSchema(data) {
 
 app.post("/api/sync", async (req, res) => {
   try {
-    console.log(
-      "Received sync request with data:",
-      JSON.stringify(req.body, null, 2)
-    );
-
     const validatedData = validateSchema(req.body);
     await writeJSONFile(jsonPath, validatedData);
 

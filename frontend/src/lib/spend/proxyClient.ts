@@ -25,6 +25,12 @@ export async function fetchProviderSpend(
   try {
     response = await fetch(PROXY_PATH, {
       method: "POST",
+      // Same-origin (the default already, made explicit here): this lets
+      // Clerk's session cookie ride along automatically so the Netlify
+      // Function's server-side Pro-plan guard (lib/verifyProAccess.ts, only
+      // enforced in Netlify's production context) can verify who's asking
+      // with no separate token-fetching wired through this plain function.
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         provider: adapter.id,

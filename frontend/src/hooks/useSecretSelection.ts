@@ -10,6 +10,9 @@ export interface SecretSelection {
   toggle: (id: string) => void;
   selectAll: (ids: string[]) => void;
   clear: () => void;
+  // Tri-state for a "select all" checkbox scoped to whatever ids are
+  // currently visible (a filtered/searched subset), not all of selectedIds.
+  selectAllState: (visibleIds: string[]) => boolean | "indeterminate";
 }
 
 export function useSecretSelection(): SecretSelection {
@@ -40,8 +43,19 @@ export function useSecretSelection(): SecretSelection {
     [selectedIds],
   );
 
+  const selectAllState = useCallback(
+    (visibleIds: string[]): boolean | "indeterminate" => {
+      const selectedVisibleCount = visibleIds.filter((id) =>
+        selectedIds.has(id)
+      ).length;
+      if (visibleIds.length === 0 || selectedVisibleCount === 0) return false;
+      return selectedVisibleCount === visibleIds.length ? true : "indeterminate";
+    },
+    [selectedIds],
+  );
+
   return useMemo(
-    () => ({ selectedIds, isSelected, toggle, selectAll, clear }),
-    [selectedIds, isSelected, toggle, selectAll, clear],
+    () => ({ selectedIds, isSelected, toggle, selectAll, clear, selectAllState }),
+    [selectedIds, isSelected, toggle, selectAll, clear, selectAllState],
   );
 }

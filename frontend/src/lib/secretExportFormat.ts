@@ -66,3 +66,23 @@ export function buildExportContent(
 ): string {
   return pairs.map((p) => formatExportLine(p.name, p.value)).join("\n");
 }
+
+// Secret names in this app are free-form (SecretModal has no name-format
+// validation), but formatDotenvLine/formatExportLine deliberately throw on a
+// name that isn't a valid environment-variable identifier. Callers building
+// a batch export should use this to drop the offenders instead of letting
+// one badly-named secret (e.g. "Stripe API Key") crash the whole export.
+export function partitionExportable<T extends { name: string; value: string }>(
+  pairs: T[],
+): { exportable: T[]; skippedNames: string[] } {
+  const exportable: T[] = [];
+  const skippedNames: string[] = [];
+  for (const pair of pairs) {
+    if (isValidSecretName(pair.name)) {
+      exportable.push(pair);
+    } else {
+      skippedNames.push(pair.name);
+    }
+  }
+  return { exportable, skippedNames };
+}

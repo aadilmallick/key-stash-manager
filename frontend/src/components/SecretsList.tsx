@@ -9,7 +9,6 @@ import {
   Import,
   LucideDownload,
   LucideFolder,
-  LucideXCircle,
   Plus,
   Search,
 } from "lucide-react";
@@ -17,9 +16,21 @@ import SecretModal from "./SecretModal";
 import ExportSecretsModal from "./secrets/ExportSecretsModal";
 import SecretRow from "./secrets/SecretRow";
 import { computeReorderedIds } from "@/lib/reorder";
+import {
+  buildDotenvContent,
+  formatDotenvLine,
+  isValidSecretName,
+  partitionExportable,
+} from "@/lib/secretExportFormat";
 import { useToast } from "@/components/ui/use-toast";
 import { useSync } from "@/hooks/useSync";
-import { HideDialogButton, ToggleDialogButton } from "./custom/PopoverButtons";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { useCurrentProfile } from "@/hooks/useProfiles";
@@ -57,6 +68,8 @@ const SecretsList = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isImportEnvOpen, setIsImportEnvOpen] = useState(false);
   const [editingSecret, setEditingSecret] = useState<Secret | undefined>();
   const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set());
   const [copiedSecrets, setCopiedSecrets] = useState<Set<string>>(new Set());
@@ -93,14 +106,9 @@ const SecretsList = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFolderId]);
 
-  const selectedVisibleCount =
-    filteredSecrets.filter((s) => selection.isSelected(s.id)).length;
-  const selectAllState: boolean | "indeterminate" =
-    filteredSecrets.length === 0 || selectedVisibleCount === 0
-      ? false
-      : selectedVisibleCount === filteredSecrets.length
-      ? true
-      : "indeterminate";
+  const selectAllState = selection.selectAllState(
+    filteredSecrets.map((s) => s.id),
+  );
 
   const selectedSecretsForExport = decryptedSecrets
     .filter((s) => selection.isSelected(s.id))
@@ -138,7 +146,16 @@ const SecretsList = () => {
   };
 
   async function copyEnv(name: string, value: string, secretId: string) {
-    await copyToClipboard(`${name}=${value}`, secretId);
+    if (!isValidSecretName(name)) {
+      toast({
+        title: "Copy failed",
+        description:
+          `"${name}" isn't a valid environment variable name, so it can't be copied as NAME=value.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    await copyToClipboard(formatDotenvLine(name, value), secretId);
   }
 
   const copyToClipboard = async (value: string, secretId: string) => {
@@ -218,15 +235,28 @@ const SecretsList = () => {
     }
 
     try {
-      const strings = decryptedSecrets.map(
-        (secret) => `${secret.name}=${secret.value}`,
+      const { exportable, skippedNames } = partitionExportable(
+        decryptedSecrets.map((secret) => ({
+          name: secret.name,
+          value: secret.value,
+        })),
       );
-      const envContents = strings.join("\n");
+      const envContents = buildDotenvContent(exportable);
       await navigator.clipboard.writeText(envContents);
-      toast({
-        title: "Copied to clipboard",
-        description: "Copied folder as .env to clipbaord",
-      });
+      if (skippedNames.length > 0) {
+        toast({
+          title: "Copied to clipboard",
+          description:
+            `Skipped ${skippedNames.length} secret(s) with names that aren't valid env vars: ${
+              skippedNames.join(", ")
+            }`,
+        });
+      } else {
+        toast({
+          title: "Copied to clipboard",
+          description: "Copied folder as .env to clipbaord",
+        });
+      }
 
       const blob = new Blob([envContents], {
         type: "text/plain",
@@ -255,14 +285,8 @@ const SecretsList = () => {
   }
 
   async function importEnvFile() {
-    const modal = document.getElementById(
-      "import-env-modal",
-    ) as HTMLDialogElement;
-    // 1. close the modal
-    if (modal) {
-      modal.close();
-    }
-    // 2. check if there is content to import
+    setIsImportEnvOpen(false);
+    // check if there is content to import
     if (!importEnvFileContents.trim()) {
       toast({
         title: "Import failed",
@@ -348,13 +372,7 @@ const SecretsList = () => {
   async function importEncryptedShareFile() {
     if (!encryptedShareFile || !encryptedShareToken.trim()) return;
 
-    // Native <dialog> elements render in the browser's top layer, above
-    // any portal-rendered Radix content - close this one first, or the
-    // confirm AlertDialog would be visually stuck underneath it and
-    // unclickable (same fix as the plaintext import path above).
-    (
-      document.getElementById("import-modal") as HTMLDialogElement | null
-    )?.close();
+    setIsImportOpen(false);
 
     const confirmed = await confirm({
       title: "Import encrypted share",
@@ -409,24 +427,24 @@ const SecretsList = () => {
           </div>
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <div className="flex gap-2 flex-wrap">
-              <ToggleDialogButton
-                dialogid="import-modal"
+              <Button
                 variant="ghost"
                 disabled={isSyncing}
                 className="bg-orange-300 border-2 border-orange-700 cursor-pointer text-orange-950 font-medium hover:bg-orange-400"
+                onClick={() => setIsImportOpen(true)}
               >
                 <Import className="h-4 w-4 mr-2" />
                 Import Secrets
-              </ToggleDialogButton>
-              <ToggleDialogButton
-                dialogid="import-env-modal"
+              </Button>
+              <Button
                 variant="ghost"
                 disabled={isSyncing}
                 className="bg-emerald-300 border-2 border-emerald-700 cursor-pointer text-emerald-950 font-medium hover:bg-emerald-400"
+                onClick={() => setIsImportEnvOpen(true)}
               >
                 <Import className="h-4 w-4 mr-2" color="#064e3b" />
                 Import Env file
-              </ToggleDialogButton>
+              </Button>
               <Button
                 variant="ghost"
                 disabled={isSyncing}
@@ -575,181 +593,155 @@ const SecretsList = () => {
 
         {/* for importing all secrets*/}
 
-        <dialog
-          id="import-modal"
-          className="px-4 py-12 rounded-lg border-2 border-gray-300 bg-white relative space-y-2"
-        >
-          <h3 className="text-lg font-bold">Import JSON configuration</h3>
-
-          <HideDialogButton
-            dialogid="import-modal"
-            className="absolute top-1 right-1 cursor-pointer"
-            variant="ghost"
+        <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+          <DialogContent
+            id="import-modal"
+            className="max-h-[85vh] overflow-y-auto styled-scrollbar"
           >
-            <LucideXCircle color="red" className="w-8 h-8" />
-          </HideDialogButton>
-          <p className="text-sm text-muted-foreground">
-            You can override all current secrets and folders by importing a JSON
-            file (one that's exported from this website). Drag a file into the
-            file selector to get started.
-          </p>
-          <p className="text-red-400 text-sm mb-4">
-            Caution: this will override all current data, which is
-            irrecoverable.
-          </p>
-
-          <div>
-            <Label>Name</Label>
-            <Input
-              id="json file"
-              type="file"
-              placeholder="jsonfile.txt"
-              multiple={false}
-              onChange={async (e) => {
-                // Native <dialog> elements render in the browser's top
-                // layer, above any portal-rendered Radix content - close
-                // this one first, or the confirm AlertDialog would be
-                // visually stuck underneath it and unclickable.
-                (
-                  document.getElementById(
-                    "import-modal",
-                  ) as HTMLDialogElement | null
-                )?.close();
-                const shouldContinue = await confirm({
-                  title: "Import and overwrite data",
-                  description:
-                    "Are you sure you want to import your data? This will overwrite all data for all profiles.",
-                  confirmLabel: "Import",
-                  variant: "destructive",
-                });
-                if (!shouldContinue) return;
-                const target = e.target as HTMLInputElement;
-                if (target.files && target.files.length > 0) {
-                  const file = target.files[0]!;
-                  await importJSONFile(file);
-                  target.value = ""; // Clear the input value
-                }
-              }}
-            />
-          </div>
-
-          <div className="pt-4 mt-4 border-t space-y-2">
-            <h4 className="text-base font-bold">
-              Or import an encrypted share
-            </h4>
-            <p className="text-sm text-muted-foreground">
-              Received an encrypted file and a decryption token from someone
-              else? Upload the file and paste the token here.
-            </p>
-            <p className="text-red-400 text-sm">
-              Caution: this may overwrite all current data (if it's a full
-              export) or add a new profile (if it's a single profile). This
-              cannot be undone.
+            <DialogHeader>
+              <DialogTitle>Import JSON configuration</DialogTitle>
+              <DialogDescription>
+                You can override all current secrets and folders by importing
+                a JSON file (one that's exported from this website).
+              </DialogDescription>
+            </DialogHeader>
+            <p className="text-red-400 text-sm mb-4">
+              Caution: this will override all current data, which is
+              irrecoverable.
             </p>
 
             <div>
-              <Label htmlFor="encrypted-share-file">Encrypted file</Label>
+              <Label>Name</Label>
               <Input
-                id="encrypted-share-file"
+                id="json file"
                 type="file"
-                onChange={(e) =>
-                  setEncryptedShareFile(e.target.files?.[0] ?? null)}
+                placeholder="jsonfile.txt"
+                multiple={false}
+                onChange={async (e) => {
+                  setIsImportOpen(false);
+                  const shouldContinue = await confirm({
+                    title: "Import and overwrite data",
+                    description:
+                      "Are you sure you want to import your data? This will overwrite all data for all profiles.",
+                    confirmLabel: "Import",
+                    variant: "destructive",
+                  });
+                  if (!shouldContinue) return;
+                  const target = e.target as HTMLInputElement;
+                  if (target.files && target.files.length > 0) {
+                    const file = target.files[0]!;
+                    await importJSONFile(file);
+                    target.value = ""; // Clear the input value
+                  }
+                }}
               />
             </div>
-            <div>
-              <Label htmlFor="encrypted-share-token">Decryption token</Label>
-              <Input
-                id="encrypted-share-token"
-                value={encryptedShareToken}
-                onChange={(e) => setEncryptedShareToken(e.target.value)}
-                placeholder="Paste the decryption token here"
-                className="font-mono text-xs"
-              />
+
+            <div className="pt-4 mt-4 border-t space-y-2">
+              <h4 className="text-base font-bold">
+                Or import an encrypted share
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Received an encrypted file and a decryption token from someone
+                else? Upload the file and paste the token here.
+              </p>
+              <p className="text-red-400 text-sm">
+                Caution: this may overwrite all current data (if it's a full
+                export) or add a new profile (if it's a single profile). This
+                cannot be undone.
+              </p>
+
+              <div>
+                <Label htmlFor="encrypted-share-file">Encrypted file</Label>
+                <Input
+                  id="encrypted-share-file"
+                  type="file"
+                  onChange={(e) =>
+                    setEncryptedShareFile(e.target.files?.[0] ?? null)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="encrypted-share-token">Decryption token</Label>
+                <Input
+                  id="encrypted-share-token"
+                  value={encryptedShareToken}
+                  onChange={(e) => setEncryptedShareToken(e.target.value)}
+                  placeholder="Paste the decryption token here"
+                  className="font-mono text-xs"
+                />
+              </div>
+              <Button
+                variant="destructive"
+                className="w-full"
+                disabled={!encryptedShareFile ||
+                  !encryptedShareToken.trim() ||
+                  isImportingShare}
+                onClick={importEncryptedShareFile}
+              >
+                {isImportingShare ? "Importing..." : "Import Encrypted Share"}
+              </Button>
             </div>
-            <Button
-              variant="destructive"
-              className="w-full"
-              disabled={!encryptedShareFile ||
-                !encryptedShareToken.trim() ||
-                isImportingShare}
-              onClick={importEncryptedShareFile}
-            >
-              {isImportingShare ? "Importing..." : "Import Encrypted Share"}
-            </Button>
-          </div>
-        </dialog>
+          </DialogContent>
+        </Dialog>
 
         {/*  for importing .env files or text content */}
 
-        <dialog
-          id="import-env-modal"
-          className="px-4 py-8 rounded-lg border-2 border-gray-300 bg-white relative space-y-2"
-        >
-          <h3 className="text-lg font-bold">Import .env file</h3>
-          <HideDialogButton
-            dialogid="import-env-modal"
-            className="absolute top-1 right-1 cursor-pointer"
-            variant="ghost"
-          >
-            <LucideXCircle color="red" className="w-8 h-8" />
-          </HideDialogButton>
-          <p className="text-sm text-muted-foreground">
-            You can import a .env file or its contents and choose which folder
-            to export to.
-          </p>
-          <p className="text-red-400 text-sm mb-4 font-semibold">
-            Caution: this will override any environment variables with the same
-            name.
-          </p>
+        <Dialog open={isImportEnvOpen} onOpenChange={setIsImportEnvOpen}>
+          <DialogContent id="import-env-modal">
+            <DialogHeader>
+              <DialogTitle>Import .env file</DialogTitle>
+              <DialogDescription>
+                You can import a .env file or its contents and choose which
+                folder to export to.
+              </DialogDescription>
+            </DialogHeader>
+            <p className="text-red-400 text-sm mb-4 font-semibold">
+              Caution: this will override any environment variables with the
+              same name.
+            </p>
 
-          <div className="space-y-2 pt-4">
-            <Label>.env file</Label>
-            <Input
-              id="json file"
-              type="file"
-              placeholder="jsonfile.txt"
-              multiple={false}
-              onChange={async (e) => {
-                // See the import-modal handler above - close the native
-                // top-layer <dialog> first so the confirm AlertDialog isn't
-                // stuck underneath it.
-                (
-                  document.getElementById(
-                    "import-env-modal",
-                  ) as HTMLDialogElement | null
-                )?.close();
-                const shouldContinue = await confirm({
-                  title: "Import .env file",
-                  description:
-                    "Are you sure you want to import your data? This will overwrite any environment variables with the same name.",
-                  confirmLabel: "Import",
-                  variant: "destructive",
-                });
-                if (!shouldContinue) return;
-                const target = e.target as HTMLInputElement;
-                if (target.files && target.files.length > 0) {
-                  const file = target.files[0]!;
-                  const content = await file.text();
-                  setImportEnvFileContents(content);
-                  target.value = ""; // Clear the input value
-                }
-              }}
-            />
-            <Textarea
-              value={importEnvFileContents}
-              onChange={(e) => setImportEnvFileContents(e.target.value)}
-              className="h-40 w-full resize-none"
-              placeholder="Or paste your .env file contents here"
-            />
-            <Button
-              variant="default"
-              className="w-full"
-              onClick={importEnvFile}
-            >
-              Import
-            </Button>
-          </div>
-        </dialog>
+            <div className="space-y-2 pt-4">
+              <Label>.env file</Label>
+              <Input
+                id="json file"
+                type="file"
+                placeholder="jsonfile.txt"
+                multiple={false}
+                onChange={async (e) => {
+                  setIsImportEnvOpen(false);
+                  const shouldContinue = await confirm({
+                    title: "Import .env file",
+                    description:
+                      "Are you sure you want to import your data? This will overwrite any environment variables with the same name.",
+                    confirmLabel: "Import",
+                    variant: "destructive",
+                  });
+                  if (!shouldContinue) return;
+                  const target = e.target as HTMLInputElement;
+                  if (target.files && target.files.length > 0) {
+                    const file = target.files[0]!;
+                    const content = await file.text();
+                    setImportEnvFileContents(content);
+                    target.value = ""; // Clear the input value
+                  }
+                }}
+              />
+              <Textarea
+                value={importEnvFileContents}
+                onChange={(e) => setImportEnvFileContents(e.target.value)}
+                className="h-40 w-full resize-none"
+                placeholder="Or paste your .env file contents here"
+              />
+              <Button
+                variant="default"
+                className="w-full"
+                onClick={importEnvFile}
+              >
+                Import
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <SecretModal
           isOpen={isModalOpen}

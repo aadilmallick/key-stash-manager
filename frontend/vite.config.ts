@@ -46,22 +46,35 @@ if (!isUsingServer) {
 }
 console.log("plugins", plugins.length);
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  plugins,
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+export default defineConfig(({ mode }) => {
+  // VITE_IS_TESTING disables ClerkProvider and unlocks every paid/gated
+  // feature (see lib/config/env.ts) - it must only ever be set per-command
+  // for local dev/e2e, never baked into a real production build, or every
+  // visitor to that build would get auth/billing silently disabled.
+  if (mode === "production" && process.env.VITE_IS_TESTING === "true") {
+    throw new Error(
+      "Refusing to build: VITE_IS_TESTING=true is set for a production build. " +
+        "Unset it (it must be passed per-command, not baked into .env) before building for production.",
+    );
+  }
+
+  return {
+    plugins,
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
     },
-  },
-  optimizeDeps: {
-    // These construct Web Workers internally via `new URL(..., import.meta.url)`.
-    // Vite's dev-mode dependency pre-bundler flattens/hashes packages into
-    // node_modules/.vite/deps, which breaks that relative worker URL (it
-    // resolves to index.html instead of the worker script, since the
-    // pre-bundled path is a virtual asset Vite's dev server doesn't serve as
-    // a real worker chunk). Excluding them lets Vite serve the packages
-    // directly from node_modules, where the worker URL resolves correctly.
-    // Production builds are unaffected (already verified via `npm run build`).
-    exclude: ["@journeyapps/wa-sqlite", "@tanstack/browser-db-sqlite-persistence"],
-  },
-}));
+    optimizeDeps: {
+      // These construct Web Workers internally via `new URL(..., import.meta.url)`.
+      // Vite's dev-mode dependency pre-bundler flattens/hashes packages into
+      // node_modules/.vite/deps, which breaks that relative worker URL (it
+      // resolves to index.html instead of the worker script, since the
+      // pre-bundled path is a virtual asset Vite's dev server doesn't serve as
+      // a real worker chunk). Excluding them lets Vite serve the packages
+      // directly from node_modules, where the worker URL resolves correctly.
+      // Production builds are unaffected (already verified via `npm run build`).
+      exclude: ["@journeyapps/wa-sqlite", "@tanstack/browser-db-sqlite-persistence"],
+    },
+  };
+});

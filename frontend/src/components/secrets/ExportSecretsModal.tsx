@@ -12,7 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, EyeOff, Copy, Download } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { downloadText } from "@/lib/db/importExport";
-import { buildDotenvContent, buildExportContent } from "@/lib/secretExportFormat";
+import {
+  buildDotenvContent,
+  buildExportContent,
+  partitionExportable,
+} from "@/lib/secretExportFormat";
 
 export interface ExportableSecret {
   name: string;
@@ -45,8 +49,21 @@ const ExportSecretsModal = ({
   const { toast } = useToast();
   const [isUnmasked, setIsUnmasked] = useState(false);
 
-  const dotenvContent = useMemo(() => buildDotenvContent(secrets), [secrets]);
-  const exportContent = useMemo(() => buildExportContent(secrets), [secrets]);
+  // Secret names are free-form (no identifier restriction when adding a
+  // secret), so a name like "Stripe API Key" can't become a valid env line -
+  // skip those rather than letting one bad name crash the whole export.
+  const { exportable, skippedNames } = useMemo(
+    () => partitionExportable(secrets),
+    [secrets],
+  );
+  const dotenvContent = useMemo(
+    () => buildDotenvContent(exportable),
+    [exportable],
+  );
+  const exportContent = useMemo(
+    () => buildExportContent(exportable),
+    [exportable],
+  );
 
   const displayed = (content: string) =>
     isUnmasked ? content : maskContent(content);
@@ -81,6 +98,13 @@ const ExportSecretsModal = ({
             Choose a format to export the selected secrets.
           </DialogDescription>
         </DialogHeader>
+
+        {skippedNames.length > 0 && (
+          <p className="text-sm text-destructive">
+            Skipped {skippedNames.length} secret(s) whose name isn't a valid
+            environment variable identifier: {skippedNames.join(", ")}
+          </p>
+        )}
 
         <Tabs defaultValue="download" className="w-full">
           <div className="flex items-center justify-between gap-2 mb-2">

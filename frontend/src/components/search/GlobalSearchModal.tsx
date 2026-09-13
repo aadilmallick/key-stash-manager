@@ -16,6 +16,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Search, Eye, EyeOff, FileDown, ChevronDown, X } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import { SecretFilter } from "@/lib/secretFilter";
 import { useGlobalSecretSearch } from "@/hooks/useGlobalSecretSearch";
 import { useSecretSelection } from "@/hooks/useSecretSelection";
@@ -39,6 +40,7 @@ const GlobalSearchModal = ({ isOpen, onClose }: GlobalSearchModalProps) => {
   const folders = useAllFolders();
   const selection = useSecretSelection();
   const { decryptSecretValue } = useSecretValueDecryptor();
+  const { toast } = useToast();
 
   const [rawQuery, setRawQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -69,15 +71,9 @@ const GlobalSearchModal = ({ isOpen, onClose }: GlobalSearchModalProps) => {
 
   const { results } = useGlobalSecretSearch(filter);
 
-  const selectedVisibleCount = results.filter((r) =>
-    selection.isSelected(r.secretId),
-  ).length;
-  const selectAllState: boolean | "indeterminate" =
-    results.length === 0 || selectedVisibleCount === 0
-      ? false
-      : selectedVisibleCount === results.length
-      ? true
-      : "indeterminate";
+  const selectAllState = selection.selectAllState(
+    results.map((r) => r.secretId),
+  );
 
   const resetAndClose = () => {
     setRawQuery("");
@@ -124,16 +120,32 @@ const GlobalSearchModal = ({ isOpen, onClose }: GlobalSearchModalProps) => {
     setIsPreparingExport(true);
     try {
       const selected = results.filter((r) => selection.isSelected(r.secretId));
+      const failedNames: string[] = [];
       const pairs = await Promise.all(
-        selected.map(async (r) => ({
-          name: r.name,
-          value:
-            decryptedValues.get(r.secretId) ??
-            (await decryptSecretValue(r.secretId)) ??
-            "",
-        })),
+        selected.map(async (r) => {
+          try {
+            const cached = decryptedValues.get(r.secretId);
+            const value = cached ?? (await decryptSecretValue(r.secretId));
+            if (value === null) throw new Error("secret no longer exists");
+            return { name: r.name, value };
+          } catch {
+            failedNames.push(r.name);
+            return null;
+          }
+        }),
       );
-      setExportPayload(pairs);
+      const exportable = pairs.filter(
+        (p): p is ExportableSecret => p !== null,
+      );
+      if (failedNames.length > 0) {
+        toast({
+          title: "Some secrets couldn't be exported",
+          description:
+            `Failed to decrypt: ${failedNames.join(", ")}. They were left out of the export.`,
+          variant: "destructive",
+        });
+      }
+      setExportPayload(exportable);
       setIsExportModalOpen(true);
     } finally {
       setIsPreparingExport(false);
