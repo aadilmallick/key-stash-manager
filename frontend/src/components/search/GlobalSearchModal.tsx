@@ -23,6 +23,9 @@ import { useSecretSelection } from "@/hooks/useSecretSelection";
 import { useSecretValueDecryptor } from "@/hooks/useSecrets";
 import { useProfiles } from "@/hooks/useProfiles";
 import { useAllFolders } from "@/hooks/useFolders";
+import { useDbCollections } from "@/hooks/useDb";
+import { buildEncryptedShare } from "@/lib/db/importExport";
+import { Secret } from "@/types";
 import ExportSecretsModal, {
   ExportableSecret,
 } from "@/components/secrets/ExportSecretsModal";
@@ -40,6 +43,7 @@ const GlobalSearchModal = ({ isOpen, onClose }: GlobalSearchModalProps) => {
   const folders = useAllFolders();
   const selection = useSecretSelection();
   const { decryptSecretValue } = useSecretValueDecryptor();
+  const { collections, vaultKey } = useDbCollections();
   const { toast } = useToast();
 
   const [rawQuery, setRawQuery] = useState("");
@@ -52,6 +56,8 @@ const GlobalSearchModal = ({ isOpen, onClose }: GlobalSearchModalProps) => {
   );
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportPayload, setExportPayload] = useState<ExportableSecret[]>([]);
+  const [exportSecretsForEncryption, setExportSecretsForEncryption] =
+    useState<Secret[]>([]);
   const [isPreparingExport, setIsPreparingExport] = useState(false);
 
   useEffect(() => {
@@ -121,21 +127,21 @@ const GlobalSearchModal = ({ isOpen, onClose }: GlobalSearchModalProps) => {
     try {
       const selected = results.filter((r) => selection.isSelected(r.secretId));
       const failedNames: string[] = [];
-      const pairs = await Promise.all(
+      const decrypted = await Promise.all(
         selected.map(async (r) => {
           try {
             const cached = decryptedValues.get(r.secretId);
             const value = cached ?? (await decryptSecretValue(r.secretId));
             if (value === null) throw new Error("secret no longer exists");
-            return { name: r.name, value };
+            return { id: r.secretId, name: r.name, value };
           } catch {
             failedNames.push(r.name);
             return null;
           }
         }),
       );
-      const exportable = pairs.filter(
-        (p): p is ExportableSecret => p !== null,
+      const succeeded = decrypted.filter(
+        (p): p is { id: string; name: string; value: string } => p !== null,
       );
       if (failedNames.length > 0) {
         toast({
@@ -145,7 +151,13 @@ const GlobalSearchModal = ({ isOpen, onClose }: GlobalSearchModalProps) => {
           variant: "destructive",
         });
       }
-      setExportPayload(exportable);
+      setExportPayload(
+        succeeded.map(({ name, value }): ExportableSecret => ({
+          name,
+          value,
+        })),
+      );
+      setExportSecretsForEncryption(succeeded);
       setIsExportModalOpen(true);
     } finally {
       setIsPreparingExport(false);
@@ -351,6 +363,13 @@ const GlobalSearchModal = ({ isOpen, onClose }: GlobalSearchModalProps) => {
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
         secrets={exportPayload}
+        buildEncryptedShare={() =>
+          buildEncryptedShare(collections, vaultKey, {
+            type: "custom",
+            profileName: `Search export (${exportSecretsForEncryption.length} secrets)`,
+            folderName: "Search results",
+            secrets: exportSecretsForEncryption,
+          })}
       />
     </>
   );

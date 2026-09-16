@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import SecretModal from "./SecretModal";
 import ExportSecretsModal from "./secrets/ExportSecretsModal";
+import ExportFormatModal from "./secrets/ExportFormatModal";
 import SecretRow from "./secrets/SecretRow";
 import { computeReorderedIds } from "@/lib/reorder";
 import {
@@ -44,6 +45,7 @@ import { useConfirm } from "@/hooks/useConfirm";
 import { useSecretSelection } from "@/hooks/useSecretSelection";
 import { useDbCollections } from "@/hooks/useDb";
 import {
+  buildEncryptedShare,
   exportAllProfilesFile,
   importAllFromJson,
   importEncryptedShare,
@@ -68,6 +70,9 @@ const SecretsList = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportFormatTarget, setExportFormatTarget] = useState<
+    "all" | "folder" | null
+  >(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isImportEnvOpen, setIsImportEnvOpen] = useState(false);
   const [editingSecret, setEditingSecret] = useState<Secret | undefined>();
@@ -113,6 +118,22 @@ const SecretsList = () => {
   const selectedSecretsForExport = decryptedSecrets
     .filter((s) => selection.isSelected(s.id))
     .map((s) => ({ name: s.name, value: s.value }));
+
+  // Explicit field allow-list so DB-internal fields (folderId, order)
+  // don't leak into an exported wire-format Secret, mirroring
+  // buildNestedSecretsData's own convention in lib/db/importExport.ts.
+  const toWireSecret = (s: typeof decryptedSecrets[number]): Secret => ({
+    id: s.id,
+    name: s.name,
+    value: s.value,
+    description: s.description,
+    createdAt: s.createdAt,
+    updatedAt: s.updatedAt,
+  });
+
+  const selectedFullSecrets = decryptedSecrets
+    .filter((s) => selection.isSelected(s.id))
+    .map(toWireSecret);
 
   // Reordering a filtered subset against the folder's true order would be
   // confusing, so drag-based reordering only works while unfiltered.
@@ -449,7 +470,7 @@ const SecretsList = () => {
                 variant="ghost"
                 disabled={isSyncing}
                 className="border-2 border-gray-900 cursor-pointer hover:bg-gray-900 hover:text-white transition-colors bg-blue-200 text-black"
-                onClick={onExport}
+                onClick={() => setExportFormatTarget("all")}
               >
                 <LucideDownload className="h-4 w-4 mr-2" />
                 Export All Profiles
@@ -458,7 +479,17 @@ const SecretsList = () => {
                 variant="ghost"
                 disabled={isSyncing}
                 className="border-2 border-gray-900 cursor-pointer hover:bg-gray-900 hover:text-white transition-colors"
-                onClick={onExportFolder}
+                onClick={() => {
+                  if (!selectedFolder) {
+                    toast({
+                      title: "Export failed",
+                      description: "No folder selected",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  setExportFormatTarget("folder");
+                }}
               >
                 <LucideFolder className="h-4 w-4 mr-2" />
                 Export Folder
@@ -759,6 +790,38 @@ const SecretsList = () => {
           isOpen={isExportModalOpen}
           onClose={() => setIsExportModalOpen(false)}
           secrets={selectedSecretsForExport}
+          buildEncryptedShare={() =>
+            buildEncryptedShare(collections, vaultKey, {
+              type: "custom",
+              profileName: `${currentProfile?.name ?? "Export"} (${selectedFullSecrets.length} secrets)`,
+              folderName: selectedFolder?.name ?? "Selected Secrets",
+              secrets: selectedFullSecrets,
+            })}
+        />
+
+        <ExportFormatModal
+          isOpen={exportFormatTarget !== null}
+          onClose={() => setExportFormatTarget(null)}
+          title={exportFormatTarget === "all"
+            ? "Export All Profiles"
+            : `Export Folder${
+              selectedFolder ? `: ${selectedFolder.name}` : ""
+            }`}
+          description="Choose how to export this data - plaintext is immediately usable, encrypted requires the one-time token shown after encrypting."
+          onExportPlaintext={exportFormatTarget === "all"
+            ? onExport
+            : onExportFolder}
+          onExportEncrypted={() =>
+            exportFormatTarget === "all"
+              ? buildEncryptedShare(collections, vaultKey, { type: "all" })
+              : buildEncryptedShare(collections, vaultKey, {
+                type: "custom",
+                profileName: `${currentProfile?.name ?? "Profile"} — ${
+                  selectedFolder?.name ?? "Folder"
+                }`,
+                folderName: selectedFolder?.name ?? "Folder",
+                secrets: decryptedSecrets.map(toWireSecret),
+              })}
         />
       </div>
     </TooltipProvider>

@@ -7,9 +7,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Eye, EyeOff, Copy, Download } from "lucide-react";
+import { Eye, EyeOff, Copy, Download, Lock } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { downloadText } from "@/lib/db/importExport";
 import {
@@ -17,6 +18,7 @@ import {
   buildExportContent,
   partitionExportable,
 } from "@/lib/secretExportFormat";
+import { Label } from "@/components/ui/label";
 
 export interface ExportableSecret {
   name: string;
@@ -27,6 +29,9 @@ interface ExportSecretsModalProps {
   isOpen: boolean;
   onClose: () => void;
   secrets: ExportableSecret[];
+  buildEncryptedShare: () => Promise<
+    { ciphertext: string; token: string; filename: string }
+  >;
 }
 
 function maskContent(content: string): string {
@@ -45,9 +50,12 @@ const ExportSecretsModal = ({
   isOpen,
   onClose,
   secrets,
+  buildEncryptedShare,
 }: ExportSecretsModalProps) => {
   const { toast } = useToast();
   const [isUnmasked, setIsUnmasked] = useState(false);
+  const [encryptedToken, setEncryptedToken] = useState<string | null>(null);
+  const [isEncrypting, setIsEncrypting] = useState(false);
 
   // Secret names are free-form (no identifier restriction when adding a
   // secret), so a name like "Stripe API Key" can't become a valid env line -
@@ -89,8 +97,36 @@ const ExportSecretsModal = ({
     });
   };
 
+  const handleClose = () => {
+    setEncryptedToken(null);
+    onClose();
+  };
+
+  const handleEncryptAndDownload = async () => {
+    setIsEncrypting(true);
+    try {
+      const share = await buildEncryptedShare();
+      downloadText(share.filename, share.ciphertext);
+      setEncryptedToken(share.token);
+    } catch (error) {
+      toast({
+        title: "Encryption failed",
+        description: "Could not encrypt your data for export.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsEncrypting(false);
+    }
+  };
+
+  const handleCopyToken = async () => {
+    if (!encryptedToken) return;
+    await navigator.clipboard.writeText(encryptedToken);
+    toast({ title: "Token copied", description: "Paste it somewhere safe." });
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Export {secrets.length} secret(s)</DialogTitle>
@@ -112,6 +148,7 @@ const ExportSecretsModal = ({
               <TabsTrigger value="download">Download .env</TabsTrigger>
               <TabsTrigger value="dotenv">View .env</TabsTrigger>
               <TabsTrigger value="export">Export statements</TabsTrigger>
+              <TabsTrigger value="encrypted">Encrypted</TabsTrigger>
             </TabsList>
             <Button
               variant="outline"
@@ -169,6 +206,58 @@ const ExportSecretsModal = ({
               <Copy className="h-4 w-4 mr-2" />
               Copy all
             </Button>
+          </TabsContent>
+
+          <TabsContent value="encrypted" className="space-y-3">
+            {!encryptedToken
+              ? (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Encrypts these secrets locally with a one-time key.
+                    Nothing is sent to any server.
+                  </p>
+                  <Button
+                    onClick={handleEncryptAndDownload}
+                    disabled={isEncrypting}
+                    className="w-full"
+                  >
+                    <Lock className="h-4 w-4 mr-2" />
+                    {isEncrypting ? "Encrypting..." : "Encrypt & Download"}
+                  </Button>
+                </>
+              )
+              : (
+                <div className="space-y-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                  <Label
+                    htmlFor="export-selected-token"
+                    className="text-sm font-semibold"
+                  >
+                    Decryption token
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="export-selected-token"
+                      readOnly
+                      value={encryptedToken}
+                      className="font-mono text-xs"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleCopyToken}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    Send the downloaded file and this token through{" "}
+                    <strong>two separate channels</strong>. Anyone who has
+                    both can decrypt your data - anyone who has only one
+                    can't.
+                  </p>
+                </div>
+              )}
           </TabsContent>
         </Tabs>
       </DialogContent>

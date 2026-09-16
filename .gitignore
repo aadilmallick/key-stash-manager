@@ -3,6 +3,10 @@ keys.json
 .env
 data/
 .vite/
+.agents/
+.junie/
+.pi/
+skills-lock.json
 example-full-export.json
 .DS_Store
 # Local Netlify folder

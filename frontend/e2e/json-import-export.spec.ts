@@ -22,9 +22,11 @@ test.describe("JSON export/import round trip", () => {
       page.locator(".rounded-lg.p-4.shadow-sm", { hasText: secretName }),
     ).toBeVisible();
 
-    // Export all profiles.
+    // Export all profiles - choose the plaintext option from the format
+    // picker that now appears before any download starts.
     const downloadPromise = page.waitForEvent("download");
     await page.getByRole("button", { name: "Export All Profiles" }).click();
+    await page.getByRole("button", { name: "Download Plaintext" }).click();
     const download = await downloadPromise;
     const exportPath = path.join(os.tmpdir(), `key-stash-export-${Date.now()}.json`);
     await download.saveAs(exportPath);

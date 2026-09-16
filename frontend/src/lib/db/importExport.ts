@@ -2,6 +2,7 @@ import {
   importSchemaV1,
   Profile,
   profileZodSchema,
+  Secret,
   SecretsData,
   secretsDataSchema,
 } from "@/types";
@@ -255,15 +256,44 @@ export async function exportProfileFile(
 // key via lib/e2eShare.ts. The caller is responsible for downloading the
 // returned ciphertext separately from displaying the token - keeping them
 // on two different channels is the entire security model here.
-export type ShareScope = { type: "all" } | { type: "profile"; profileId: string };
+export type ShareScope =
+  | { type: "all" }
+  | { type: "profile"; profileId: string }
+  | { type: "custom"; profileName: string; folderName: string; secrets: Secret[] };
 
 export async function buildEncryptedShare(
   collections: Collections,
   vaultKey: CryptoKey,
   scope: ShareScope,
 ): Promise<{ ciphertext: string; token: string; filename: string }> {
-  const data = await buildNestedSecretsData(collections, vaultKey);
   const date = new Date().toISOString().split("T")[0];
+
+  // Folder/selection exports already have their decrypted secrets in hand
+  // (from the caller's live-query hooks) - wrapping them in a synthetic
+  // profile lets this reuse importSingleProfile on the way back in without
+  // re-decrypting the whole vault via buildNestedSecretsData.
+  if (scope.type === "custom") {
+    const now = new Date().toISOString();
+    const profile: Profile = {
+      id: crypto.randomUUID(),
+      name: scope.profileName,
+      createdAt: now,
+      updatedAt: now,
+      folders: [
+        {
+          id: crypto.randomUUID(),
+          name: scope.folderName,
+          secrets: scope.secrets,
+        },
+      ],
+    };
+    const { ciphertext, token } = await encryptForSharing(
+      JSON.stringify(profile),
+    );
+    return { ciphertext, token, filename: `export-encrypted-${date}.enc` };
+  }
+
+  const data = await buildNestedSecretsData(collections, vaultKey);
 
   if (scope.type === "all") {
     const { ciphertext, token } = await encryptForSharing(JSON.stringify(data));
