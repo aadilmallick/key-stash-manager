@@ -126,6 +126,12 @@ test.describe("Manual E2E encrypted share round trip", () => {
       .getByRole("button", { name: "Import" })
       .click();
 
-    await expect(page.getByText("Import failed")).toBeVisible({ timeout: 15000 });
+    // exact: true - the toast title is "Import failed" verbatim, but Radix
+    // Toast also renders a visually-hidden aria-live announcer whose text is
+    // the concatenated title+description ("Import failedCouldn't decrypt
+    // this share...") - a substring match hits both and is ambiguous.
+    await expect(page.getByText("Import failed", { exact: true })).toBeVisible({
+      timeout: 15000,
+    });
   });
 });

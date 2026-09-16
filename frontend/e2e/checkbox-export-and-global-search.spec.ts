@@ -63,6 +63,13 @@ test.describe("checkbox multi-select + export", () => {
 });
 
 test.describe("global search", () => {
+  // Retried because this test does no auth/billing work itself but can get
+  // starved by Clerk's network load in other tests running concurrently
+  // under Playwright's default multi-worker parallelism (documented in
+  // DOCS/CODEBASE.md's Testing section) - a real regression here fails
+  // every retry, this only rescues transient resource-contention timeouts.
+  test.describe.configure({ retries: 2 });
+
   test("opens via button and Ctrl+K, filters by name, ignoring delimiters", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("button", { name: "Add Secret" })).toBeVisible({
